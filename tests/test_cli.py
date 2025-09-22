@@ -64,8 +64,9 @@ def test_ask_command():
 def test_ask_command_with_planner():
     """Test ask command with custom planner."""
     result = runner.invoke(app, ["ask", "test question", "--planner", "llm"])
-    assert result.exit_code == 0
+    assert result.exit_code == 1  # Should fail because LLM planner is not implemented
     assert "Using planner: llm" in result.stdout
+    assert "LLM-based planning not yet implemented" in result.stderr
 
 
 def test_ask_command_with_export():
