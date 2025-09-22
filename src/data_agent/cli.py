@@ -28,6 +28,7 @@ def load(
     """Load dataset from --path or auto-download to ./data."""
     from data_agent.ingest.dictionary import build_data_dictionary, write_dictionary
     from data_agent.ingest.loader import load_dataset
+    from data_agent.ingest.rollups import build_daily_rollups, write_daily_rollups
 
     # Ensure directories exist
     config.ensure_directories()
@@ -40,6 +41,10 @@ def load(
         data_dict = build_data_dictionary(lf)
         write_dictionary(data_dict)
 
+        # Build and write daily rollups
+        rollups_df = build_daily_rollups(lf)
+        rollups_path = write_daily_rollups(rollups_df)
+
         # Print schema information
         typer.echo(f"Loaded dataset from: {path or 'data/data.parquet'}")
         typer.echo(f"Rows: {data_dict['n_rows']:,}")
@@ -50,6 +55,7 @@ def load(
             typer.echo(f"  {col}: {dtype} (null rate: {null_rate:.1%})")
 
         typer.echo("\nData dictionary written to: artifacts/data_dictionary.json")
+        typer.echo(f"Daily rollups written to: {rollups_path}")
 
         logger.info(
             "Dataset load command executed",

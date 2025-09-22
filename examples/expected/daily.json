@@ -1,0 +1,1622 @@
+[
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "IA",
+    "category_short": "Industrial",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 84002.0,
+    "sum_all": 84002.0,
+    "net": -84002.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "IA",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 21420.0,
+    "sum_all": 21420.0,
+    "net": -21420.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "IL",
+    "category_short": "Interconnect",
+    "sum_receipts": 948096.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 948096.0,
+    "net": 948096.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "IL",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 359740.0,
+    "sum_all": 359740.0,
+    "net": -359740.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "IL",
+    "category_short": "Power",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "IL",
+    "category_short": "Production",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 30000.0,
+    "sum_all": 30000.0,
+    "net": -30000.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "IN",
+    "category_short": "Interconnect",
+    "sum_receipts": 253744.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 253744.0,
+    "net": 253744.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "IN",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 180521.0,
+    "sum_all": 180521.0,
+    "net": -180521.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "IN",
+    "category_short": "Power",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "KS",
+    "category_short": "Interconnect",
+    "sum_receipts": 47688.0,
+    "sum_deliveries": 36435.0,
+    "sum_all": 84123.0,
+    "net": 11253.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "KS",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 5072.0,
+    "sum_all": 5072.0,
+    "net": -5072.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "KS",
+    "category_short": "Production",
+    "sum_receipts": 141.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 141.0,
+    "net": 141.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "KY",
+    "category_short": "Industrial",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 6900.0,
+    "sum_all": 6900.0,
+    "net": -6900.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "KY",
+    "category_short": "Interconnect",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "KY",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 2000.0,
+    "sum_all": 2000.0,
+    "net": -2000.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "KY",
+    "category_short": "Production",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "KY",
+    "category_short": "Storage",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "LA",
+    "category_short": "Interconnect",
+    "sum_receipts": 791466.0,
+    "sum_deliveries": 1237615.0,
+    "sum_all": 2029081.0,
+    "net": -446149.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "LA",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 37503.0,
+    "sum_all": 37503.0,
+    "net": -37503.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "LA",
+    "category_short": "Power",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "LA",
+    "category_short": "Production",
+    "sum_receipts": 3400.0,
+    "sum_deliveries": 139486.0,
+    "sum_all": 142886.0,
+    "net": -136086.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "MI",
+    "category_short": "Interconnect",
+    "sum_receipts": 851908.0,
+    "sum_deliveries": 604972.0,
+    "sum_all": 1456880.0,
+    "net": 246936.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "MI",
+    "category_short": "LDC",
+    "sum_receipts": 475817.0,
+    "sum_deliveries": 412371.0,
+    "sum_all": 888188.0,
+    "net": 63446.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "MI",
+    "category_short": "Power",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 152347.0,
+    "sum_all": 152347.0,
+    "net": -152347.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "MI",
+    "category_short": "Production",
+    "sum_receipts": 64375.0,
+    "sum_deliveries": 3482.0,
+    "sum_all": 67857.0,
+    "net": 60893.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "MI",
+    "category_short": "Storage",
+    "sum_receipts": 623966.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 623966.0,
+    "net": 623966.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "MO",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 3777.0,
+    "sum_all": 3777.0,
+    "net": -3777.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "MO",
+    "category_short": "Power",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "MS",
+    "category_short": "Industrial",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 874.0,
+    "sum_all": 874.0,
+    "net": -874.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "MS",
+    "category_short": "Interconnect",
+    "sum_receipts": 36900.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 36900.0,
+    "net": 36900.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "MS",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 2500.0,
+    "sum_all": 2500.0,
+    "net": -2500.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "OH",
+    "category_short": "Industrial",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "OH",
+    "category_short": "Interconnect",
+    "sum_receipts": 1812742.0,
+    "sum_deliveries": 102969.0,
+    "sum_all": 1915711.0,
+    "net": 1709773.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "OH",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 37564.0,
+    "sum_all": 37564.0,
+    "net": -37564.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "OH",
+    "category_short": "Power",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 64000.0,
+    "sum_all": 64000.0,
+    "net": -64000.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "OK",
+    "category_short": "Industrial",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 1047.0,
+    "sum_all": 1047.0,
+    "net": -1047.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "OK",
+    "category_short": "Interconnect",
+    "sum_receipts": 115440.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 115440.0,
+    "net": 115440.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "OK",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 428.0,
+    "sum_all": 428.0,
+    "net": -428.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "OK",
+    "category_short": "Production",
+    "sum_receipts": 130271.0,
+    "sum_deliveries": 10000.0,
+    "sum_all": 140271.0,
+    "net": 120271.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "TN",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 4499.0,
+    "sum_all": 4499.0,
+    "net": -4499.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "TN",
+    "category_short": "Power",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "TX",
+    "category_short": "Interconnect",
+    "sum_receipts": 135567.0,
+    "sum_deliveries": 10000.0,
+    "sum_all": 145567.0,
+    "net": 125567.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "TX",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 997.0,
+    "sum_all": 997.0,
+    "net": -997.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "TX",
+    "category_short": "Production",
+    "sum_receipts": 5745.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 5745.0,
+    "net": 5745.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "WI",
+    "category_short": "Industrial",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 1200.0,
+    "sum_all": 1200.0,
+    "net": -1200.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "WI",
+    "category_short": "Interconnect",
+    "sum_receipts": 947.0,
+    "sum_deliveries": 11244.0,
+    "sum_all": 12191.0,
+    "net": -10297.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "WI",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 1534682.0,
+    "sum_all": 1534682.0,
+    "net": -1534682.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Pipeline Company",
+    "state_abb": "WI",
+    "category_short": "Power",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 52765.0,
+    "sum_all": 52765.0,
+    "net": -52765.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "ANR Storage Company",
+    "state_abb": "MI",
+    "category_short": "Storage",
+    "sum_receipts": 182170.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 182170.0,
+    "net": 182170.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Algonquin Gas Transmission, LLC",
+    "state_abb": "CT",
+    "category_short": "Industrial",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 5216.0,
+    "sum_all": 5216.0,
+    "net": -5216.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Algonquin Gas Transmission, LLC",
+    "state_abb": "CT",
+    "category_short": "Interconnect",
+    "sum_receipts": 24014.0,
+    "sum_deliveries": 366797.0,
+    "sum_all": 390811.0,
+    "net": -342783.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Algonquin Gas Transmission, LLC",
+    "state_abb": "CT",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 202802.0,
+    "sum_all": 202802.0,
+    "net": -202802.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Algonquin Gas Transmission, LLC",
+    "state_abb": "CT",
+    "category_short": "Not Classified",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Algonquin Gas Transmission, LLC",
+    "state_abb": "CT",
+    "category_short": "Power",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 183695.0,
+    "sum_all": 183695.0,
+    "net": -183695.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Algonquin Gas Transmission, LLC",
+    "state_abb": "CT",
+    "category_short": "Segment",
+    "sum_receipts": 43406.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 43406.0,
+    "net": 43406.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Algonquin Gas Transmission, LLC",
+    "state_abb": "MA",
+    "category_short": "Industrial",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Algonquin Gas Transmission, LLC",
+    "state_abb": "MA",
+    "category_short": "Interconnect",
+    "sum_receipts": 119665.0,
+    "sum_deliveries": 112041.0,
+    "sum_all": 231706.0,
+    "net": 7624.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Algonquin Gas Transmission, LLC",
+    "state_abb": "MA",
+    "category_short": "LDC",
+    "sum_receipts": 15802.0,
+    "sum_deliveries": 440804.0,
+    "sum_all": 456606.0,
+    "net": -425002.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Algonquin Gas Transmission, LLC",
+    "state_abb": "MA",
+    "category_short": "LNG",
+    "sum_receipts": 16410.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 16410.0,
+    "net": 16410.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Algonquin Gas Transmission, LLC",
+    "state_abb": "MA",
+    "category_short": "Power",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 142815.0,
+    "sum_all": 142815.0,
+    "net": -142815.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Algonquin Gas Transmission, LLC",
+    "state_abb": "MA",
+    "category_short": "Segment",
+    "sum_receipts": 91051.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 91051.0,
+    "net": 91051.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Algonquin Gas Transmission, LLC",
+    "state_abb": "NJ",
+    "category_short": "Interconnect",
+    "sum_receipts": 1262892.0,
+    "sum_deliveries": 642291.0,
+    "sum_all": 1905183.0,
+    "net": 620601.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Algonquin Gas Transmission, LLC",
+    "state_abb": "NJ",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 22000.0,
+    "sum_all": 22000.0,
+    "net": -22000.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Algonquin Gas Transmission, LLC",
+    "state_abb": "NY",
+    "category_short": "Interconnect",
+    "sum_receipts": 863331.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 863331.0,
+    "net": 863331.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Algonquin Gas Transmission, LLC",
+    "state_abb": "NY",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 54779.0,
+    "sum_all": 54779.0,
+    "net": -54779.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Algonquin Gas Transmission, LLC",
+    "state_abb": "RI",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 96870.0,
+    "sum_all": 96870.0,
+    "net": -96870.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Algonquin Gas Transmission, LLC",
+    "state_abb": "RI",
+    "category_short": "Power",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 16123.0,
+    "sum_all": 16123.0,
+    "net": -16123.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Alliance Pipeline LP",
+    "state_abb": "IA",
+    "category_short": "Industrial",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 8000.0,
+    "sum_all": 8000.0,
+    "net": -8000.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Alliance Pipeline LP",
+    "state_abb": "IL",
+    "category_short": "Industrial",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 327000.0,
+    "sum_all": 327000.0,
+    "net": -327000.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Alliance Pipeline LP",
+    "state_abb": "IL",
+    "category_short": "Interconnect",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 1348144.0,
+    "sum_all": 1348144.0,
+    "net": -1348144.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Alliance Pipeline LP",
+    "state_abb": "IL",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 239019.0,
+    "sum_all": 239019.0,
+    "net": -239019.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Alliance Pipeline LP",
+    "state_abb": "IL",
+    "category_short": "Power",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Alliance Pipeline LP",
+    "state_abb": "MN",
+    "category_short": "Interconnect",
+    "sum_receipts": 2000.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 2000.0,
+    "net": 2000.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Alliance Pipeline LP",
+    "state_abb": "ND",
+    "category_short": "Interconnect",
+    "sum_receipts": 1897654.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 1897654.0,
+    "net": 1897654.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Alliance Pipeline LP",
+    "state_abb": "ND",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 720.0,
+    "sum_all": 720.0,
+    "net": -720.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Alliance Pipeline LP",
+    "state_abb": "ND",
+    "category_short": "Power",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 12485.0,
+    "sum_all": 12485.0,
+    "net": -12485.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Alliance Pipeline LP",
+    "state_abb": "ND",
+    "category_short": "Production",
+    "sum_receipts": 93247.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 93247.0,
+    "net": 93247.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "American Midstream (AlaTenn), LLC",
+    "state_abb": "AL",
+    "category_short": "Industrial",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 22716.0,
+    "sum_all": 22716.0,
+    "net": -22716.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "American Midstream (AlaTenn), LLC",
+    "state_abb": "AL",
+    "category_short": "Interconnect",
+    "sum_receipts": 21650.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 21650.0,
+    "net": 21650.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "American Midstream (AlaTenn), LLC",
+    "state_abb": "AL",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 48649.0,
+    "sum_all": 48649.0,
+    "net": -48649.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "American Midstream (AlaTenn), LLC",
+    "state_abb": "AL",
+    "category_short": "Pooling Point",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 1.0,
+    "sum_all": 1.0,
+    "net": -1.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "American Midstream (AlaTenn), LLC",
+    "state_abb": "MS",
+    "category_short": "Industrial",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 1181.0,
+    "sum_all": 1181.0,
+    "net": -1181.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "American Midstream (AlaTenn), LLC",
+    "state_abb": "MS",
+    "category_short": "Interconnect",
+    "sum_receipts": 69529.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 69529.0,
+    "net": 69529.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "American Midstream (AlaTenn), LLC",
+    "state_abb": "MS",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 500.0,
+    "sum_all": 500.0,
+    "net": -500.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "American Midstream (AlaTenn), LLC",
+    "state_abb": "MS",
+    "category_short": "Pooling Point",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 1.0,
+    "sum_all": 1.0,
+    "net": -1.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "American Midstream (AlaTenn), LLC",
+    "state_abb": "TN",
+    "category_short": "Industrial",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 15923.0,
+    "sum_all": 15923.0,
+    "net": -15923.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "American Midstream (AlaTenn), LLC",
+    "state_abb": "TN",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 80.0,
+    "sum_all": 80.0,
+    "net": -80.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "American Midstream (Midla), LLC",
+    "state_abb": "LA",
+    "category_short": "Compressor",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "American Midstream (Midla), LLC",
+    "state_abb": "LA",
+    "category_short": "Industrial",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 806.0,
+    "sum_all": 806.0,
+    "net": -806.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "American Midstream (Midla), LLC",
+    "state_abb": "LA",
+    "category_short": "Interconnect",
+    "sum_receipts": 5232.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 5232.0,
+    "net": 5232.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "American Midstream (Midla), LLC",
+    "state_abb": "LA",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 1405.0,
+    "sum_all": 1405.0,
+    "net": -1405.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "American Midstream (Midla), LLC",
+    "state_abb": "LA",
+    "category_short": "Power",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "American Midstream (Midla), LLC",
+    "state_abb": "LA",
+    "category_short": "Production",
+    "sum_receipts": 57.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 57.0,
+    "net": 57.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "American Midstream (Midla), LLC",
+    "state_abb": "MS",
+    "category_short": "Industrial",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "American Midstream (Midla), LLC",
+    "state_abb": "MS",
+    "category_short": "Interconnect",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "American Midstream (Midla), LLC",
+    "state_abb": "MS",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 3078.0,
+    "sum_all": 3078.0,
+    "net": -3078.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "American Midstream (Midla), LLC",
+    "state_abb": "MS",
+    "category_short": "Production",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Arcadia Gas Storage",
+    "state_abb": "LA",
+    "category_short": "Storage",
+    "sum_receipts": 135651.0,
+    "sum_deliveries": 80963.0,
+    "sum_all": 216614.0,
+    "net": 54688.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Arkoma Pipeline",
+    "state_abb": "OK",
+    "category_short": "Interconnect",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 393727.0,
+    "sum_all": 393727.0,
+    "net": -393727.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Arkoma Pipeline",
+    "state_abb": "OK",
+    "category_short": "Production",
+    "sum_receipts": 396461.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 396461.0,
+    "net": 396461.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Arlington Natural Gas Storage",
+    "state_abb": "NY",
+    "category_short": "Storage",
+    "sum_receipts": 53500.0,
+    "sum_deliveries": 54404.0,
+    "sum_all": 107904.0,
+    "net": -904.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "BayGas Storage",
+    "state_abb": "AL",
+    "category_short": "Storage",
+    "sum_receipts": 42680.0,
+    "sum_deliveries": 304349.0,
+    "sum_all": 347029.0,
+    "net": -261669.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Big Sandy Pipeline, LLC",
+    "state_abb": "KY",
+    "category_short": "Interconnect",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 61000.0,
+    "sum_all": 61000.0,
+    "net": -61000.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Big Sandy Pipeline, LLC",
+    "state_abb": "KY",
+    "category_short": "Production",
+    "sum_receipts": 61000.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 61000.0,
+    "net": 61000.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Bison Pipeline, LLC",
+    "state_abb": "ND",
+    "category_short": "Interconnect",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Bison Pipeline, LLC",
+    "state_abb": "WY",
+    "category_short": "Production",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Blue Lake Gas Storage Company",
+    "state_abb": "MI",
+    "category_short": "Storage",
+    "sum_receipts": 192838.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 192838.0,
+    "net": 192838.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Bluewater Gas Storage, LLC",
+    "state_abb": "MI",
+    "category_short": "Storage",
+    "sum_receipts": 320503.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 320503.0,
+    "net": 320503.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Boardwalk Storage Company",
+    "state_abb": "LA",
+    "category_short": "Accounting",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Boardwalk Storage Company",
+    "state_abb": "LA",
+    "category_short": "Storage",
+    "sum_receipts": 64343.0,
+    "sum_deliveries": 64481.0,
+    "sum_all": 128824.0,
+    "net": -138.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Bobcat Gas Storage",
+    "state_abb": "LA",
+    "category_short": "Storage",
+    "sum_receipts": 141248.0,
+    "sum_deliveries": 172836.0,
+    "sum_all": 314084.0,
+    "net": -31588.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cadeville Gas Storage",
+    "state_abb": "LA",
+    "category_short": "Storage",
+    "sum_receipts": 38692.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 38692.0,
+    "net": 38692.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Caledonia Energy Partners, L.L.C.",
+    "state_abb": "MS",
+    "category_short": "Storage",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 22449.0,
+    "sum_all": 22449.0,
+    "net": -22449.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cameron Interstate Pipeline",
+    "state_abb": "LA",
+    "category_short": "Interconnect",
+    "sum_receipts": 1389039.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 1389039.0,
+    "net": 1389039.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cameron Interstate Pipeline",
+    "state_abb": "LA",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 281.0,
+    "sum_all": 281.0,
+    "net": -281.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cameron Interstate Pipeline",
+    "state_abb": "LA",
+    "category_short": "LNG",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 1437462.0,
+    "sum_all": 1437462.0,
+    "net": -1437462.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Carolina Gas Transmission",
+    "state_abb": "GA",
+    "category_short": "Interconnect",
+    "sum_receipts": 105002.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 105002.0,
+    "net": 105002.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Carolina Gas Transmission",
+    "state_abb": "SC",
+    "category_short": "Industrial",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 98796.0,
+    "sum_all": 98796.0,
+    "net": -98796.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Carolina Gas Transmission",
+    "state_abb": "SC",
+    "category_short": "Interconnect",
+    "sum_receipts": 315787.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 315787.0,
+    "net": 315787.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Carolina Gas Transmission",
+    "state_abb": "SC",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 146767.0,
+    "sum_all": 146767.0,
+    "net": -146767.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Carolina Gas Transmission",
+    "state_abb": "SC",
+    "category_short": "LNG",
+    "sum_receipts": 350.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 350.0,
+    "net": 350.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Carolina Gas Transmission",
+    "state_abb": "SC",
+    "category_short": "Power",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 171900.0,
+    "sum_all": 171900.0,
+    "net": -171900.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Central Kentucky Transmission Company",
+    "state_abb": "KY",
+    "category_short": "Interconnect",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Central Kentucky Transmission Company",
+    "state_abb": "KY",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Chandeleur Pipe Line Company",
+    "state_abb": "LA",
+    "category_short": "Production",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 1.0,
+    "sum_all": 1.0,
+    "net": -1.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Chandeleur Pipe Line Company",
+    "state_abb": "MS",
+    "category_short": "Industrial",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 19299.0,
+    "sum_all": 19299.0,
+    "net": -19299.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Chandeleur Pipe Line Company",
+    "state_abb": "MS",
+    "category_short": "Interconnect",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Chandeleur Pipe Line Company",
+    "state_abb": "MS",
+    "category_short": "Production",
+    "sum_receipts": 19300.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 19300.0,
+    "net": 19300.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cheniere Creole Trail Pipeline, L.P.",
+    "state_abb": "LA",
+    "category_short": "Interconnect",
+    "sum_receipts": 1206071.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 1206071.0,
+    "net": 1206071.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cheniere Creole Trail Pipeline, L.P.",
+    "state_abb": "LA",
+    "category_short": "LNG",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 1232709.0,
+    "sum_all": 1232709.0,
+    "net": -1232709.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cheyenne Connector",
+    "state_abb": "CO",
+    "category_short": "Interconnect",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 552467.0,
+    "sum_all": 552467.0,
+    "net": -552467.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cheyenne Connector",
+    "state_abb": "CO",
+    "category_short": "Production",
+    "sum_receipts": 552467.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 552467.0,
+    "net": 552467.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cheyenne Plains Gas Pipeline Company, L.L.C.",
+    "state_abb": "CO",
+    "category_short": "Interconnect",
+    "sum_receipts": 161241.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 161241.0,
+    "net": 161241.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cheyenne Plains Gas Pipeline Company, L.L.C.",
+    "state_abb": "CO",
+    "category_short": "Production",
+    "sum_receipts": 41955.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 41955.0,
+    "net": 41955.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cheyenne Plains Gas Pipeline Company, L.L.C.",
+    "state_abb": "KS",
+    "category_short": "Interconnect",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 165383.0,
+    "sum_all": 165383.0,
+    "net": -165383.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cheyenne Plains Gas Pipeline Company, L.L.C.",
+    "state_abb": "KS",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 41172.0,
+    "sum_all": 41172.0,
+    "net": -41172.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cimarron River Pipeline",
+    "state_abb": "CO",
+    "category_short": "Interconnect",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cimarron River Pipeline",
+    "state_abb": "CO",
+    "category_short": "Pooling Point",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cimarron River Pipeline",
+    "state_abb": "CO",
+    "category_short": "Production",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cimarron River Pipeline",
+    "state_abb": "KS",
+    "category_short": "Compressor",
+    "sum_receipts": 5294.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 5294.0,
+    "net": 5294.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cimarron River Pipeline",
+    "state_abb": "KS",
+    "category_short": "Interconnect",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 122430.0,
+    "sum_all": 122430.0,
+    "net": -122430.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cimarron River Pipeline",
+    "state_abb": "KS",
+    "category_short": "Production",
+    "sum_receipts": 3641.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 3641.0,
+    "net": 3641.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cimarron River Pipeline",
+    "state_abb": "OK",
+    "category_short": "Compressor",
+    "sum_receipts": 63065.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 63065.0,
+    "net": 63065.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cimarron River Pipeline",
+    "state_abb": "OK",
+    "category_short": "Interconnect",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 10186.0,
+    "sum_all": 10186.0,
+    "net": -10186.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cimarron River Pipeline",
+    "state_abb": "OK",
+    "category_short": "Production",
+    "sum_receipts": 36207.0,
+    "sum_deliveries": 91.0,
+    "sum_all": 36298.0,
+    "net": 36116.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cimarron River Pipeline",
+    "state_abb": "TX",
+    "category_short": "Compressor",
+    "sum_receipts": 21165.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 21165.0,
+    "net": 21165.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cimarron River Pipeline",
+    "state_abb": "TX",
+    "category_short": "Interconnect",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 1.0,
+    "sum_all": 1.0,
+    "net": -1.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Cimarron River Pipeline",
+    "state_abb": "TX",
+    "category_short": "Production",
+    "sum_receipts": 22981.0,
+    "sum_deliveries": 10995.0,
+    "sum_all": 33976.0,
+    "net": 11986.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Colorado Interstate Gas Company",
+    "state_abb": "CO",
+    "category_short": "Accounting",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 0.0,
+    "net": 0.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Colorado Interstate Gas Company",
+    "state_abb": "CO",
+    "category_short": "Industrial",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 11900.0,
+    "sum_all": 11900.0,
+    "net": -11900.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Colorado Interstate Gas Company",
+    "state_abb": "CO",
+    "category_short": "Interconnect",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 9998.0,
+    "sum_all": 9998.0,
+    "net": -9998.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Colorado Interstate Gas Company",
+    "state_abb": "CO",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 290957.0,
+    "sum_all": 290957.0,
+    "net": -290957.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Colorado Interstate Gas Company",
+    "state_abb": "CO",
+    "category_short": "Power",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 160000.0,
+    "sum_all": 160000.0,
+    "net": -160000.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Colorado Interstate Gas Company",
+    "state_abb": "CO",
+    "category_short": "Production",
+    "sum_receipts": 739819.0,
+    "sum_deliveries": 4400.0,
+    "sum_all": 744219.0,
+    "net": 735419.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Colorado Interstate Gas Company",
+    "state_abb": "CO",
+    "category_short": "Storage",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 4597.0,
+    "sum_all": 4597.0,
+    "net": -4597.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Colorado Interstate Gas Company",
+    "state_abb": "KS",
+    "category_short": "Industrial",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 1600.0,
+    "sum_all": 1600.0,
+    "net": -1600.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Colorado Interstate Gas Company",
+    "state_abb": "KS",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 4152.0,
+    "sum_all": 4152.0,
+    "net": -4152.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Colorado Interstate Gas Company",
+    "state_abb": "OK",
+    "category_short": "Interconnect",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 83020.0,
+    "sum_all": 83020.0,
+    "net": -83020.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Colorado Interstate Gas Company",
+    "state_abb": "UT",
+    "category_short": "Production",
+    "sum_receipts": 25000.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 25000.0,
+    "net": 25000.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Colorado Interstate Gas Company",
+    "state_abb": "WY",
+    "category_short": "Interconnect",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 44942.0,
+    "sum_all": 44942.0,
+    "net": -44942.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Colorado Interstate Gas Company",
+    "state_abb": "WY",
+    "category_short": "LDC",
+    "sum_receipts": 0.0,
+    "sum_deliveries": 13321.0,
+    "sum_all": 13321.0,
+    "net": -13321.0
+  },
+  {
+    "eff_gas_day": "2022-01-01",
+    "pipeline_name": "Colorado Interstate Gas Company",
+    "state_abb": "WY",
+    "category_short": "Production",
+    "sum_receipts": 37000.0,
+    "sum_deliveries": 0.0,
+    "sum_all": 37000.0,
+    "net": 37000.0
+  }
+]
