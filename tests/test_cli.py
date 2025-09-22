@@ -82,7 +82,8 @@ def test_rules_command():
     result = runner.invoke(app, ["rules"])
     assert result.exit_code == 0
     assert "Running data quality rules" in result.stdout
-    assert "Rules scan (placeholder)" in result.stdout
+    assert "Data Quality Rules Summary" in result.stdout
+    assert "Total violations found:" in result.stdout
 
 
 def test_rules_command_with_options():
