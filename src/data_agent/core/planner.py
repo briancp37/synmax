@@ -25,6 +25,8 @@ _PATTERNS = [
     ),
     # total receipts for pipeline
     (re.compile(r"total receipts for (.+)", re.I), "total_receipts_pipeline"),
+    # total scheduled quantity for pipeline
+    (re.compile(r"total scheduled quantity for (.+?)(?:\?|$)", re.I), "total_scheduled_pipeline"),
     # average scheduled quantity by state
     (re.compile(r"average scheduled quantity by state", re.I), "avg_scheduled_by_state"),
 ]
@@ -53,11 +55,14 @@ def plan(q: str, deterministic: bool = True) -> Plan:
 
         if key == "sum_deliveries_on_date":
             pipeline, d = m.group(1).strip(), m.group(2)
+            import polars as pl
+            year, month, day = map(int, d.split('-'))
+            date_val = pl.date(year, month, day)
             return Plan(
                 filters=[
                     Filter(column="pipeline_name", op="=", value=pipeline),
                     Filter(column="rec_del_sign", op="=", value=-1),  # -1 for deliveries
-                    Filter(column="eff_gas_day", op="between", value=[d, d]),
+                    Filter(column="eff_gas_day", op="between", value=[date_val, date_val]),
                 ],
                 aggregate=Aggregate(
                     groupby=[], metrics=[{"col": "scheduled_quantity", "fn": "sum"}]
@@ -66,10 +71,11 @@ def plan(q: str, deterministic: bool = True) -> Plan:
 
         elif key == "top_states_year":
             n, year = int(m.group(1)), m.group(2)
+            import polars as pl
             return Plan(
                 filters=[
                     Filter(
-                        column="eff_gas_day", op="between", value=[f"{year}-01-01", f"{year}-12-31"]
+                        column="eff_gas_day", op="between", value=[pl.date(int(year), 1, 1), pl.date(int(year), 12, 31)]
                     )
                 ],
                 aggregate=Aggregate(
@@ -80,11 +86,16 @@ def plan(q: str, deterministic: bool = True) -> Plan:
 
         elif key == "deliveries_date_range":
             pipeline, start_date, end_date = m.group(1).strip(), m.group(2), m.group(3)
+            import polars as pl
+            start_year, start_month, start_day = map(int, start_date.split('-'))
+            end_year, end_month, end_day = map(int, end_date.split('-'))
+            start_date_val = pl.date(start_year, start_month, start_day)
+            end_date_val = pl.date(end_year, end_month, end_day)
             return Plan(
                 filters=[
                     Filter(column="pipeline_name", op="=", value=pipeline),
                     Filter(column="rec_del_sign", op="=", value=-1),  # -1 for deliveries
-                    Filter(column="eff_gas_day", op="between", value=[start_date, end_date]),
+                    Filter(column="eff_gas_day", op="between", value=[start_date_val, end_date_val]),
                 ],
                 aggregate=Aggregate(
                     groupby=["eff_gas_day"], metrics=[{"col": "scheduled_quantity", "fn": "sum"}]
@@ -98,6 +109,17 @@ def plan(q: str, deterministic: bool = True) -> Plan:
                 filters=[
                     Filter(column="pipeline_name", op="=", value=pipeline),
                     Filter(column="rec_del_sign", op="=", value=1),  # 1 for receipts
+                ],
+                aggregate=Aggregate(
+                    groupby=[], metrics=[{"col": "scheduled_quantity", "fn": "sum"}]
+                ),
+            )
+
+        elif key == "total_scheduled_pipeline":
+            pipeline = m.group(1).strip()
+            return Plan(
+                filters=[
+                    Filter(column="pipeline_name", op="=", value=pipeline),
                 ],
                 aggregate=Aggregate(
                     groupby=[], metrics=[{"col": "scheduled_quantity", "fn": "sum"}]
