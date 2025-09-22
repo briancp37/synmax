@@ -78,17 +78,46 @@ def ask(
         "deterministic", "--planner", help="Planner type: deterministic or llm"
     ),
     export: Optional[str] = typer.Option(None, "--export", help="Export results to JSON file"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show plan JSON without executing"),
 ) -> None:
     """Ask a natural-language question about the dataset."""
+    import json
+
+    from data_agent.core.planner import plan as create_plan
+
     typer.echo(f"Question: {q}")
     typer.echo(f"Using planner: {planner}")
 
-    if export:
-        typer.echo(f"Will export results to: {export}")
+    try:
+        # Create the plan
+        query_plan = create_plan(q, deterministic=(planner == "deterministic"))
 
-    # TODO: planner.plan(q) -> Plan; executor.run(Plan) -> Answer+Evidence
-    logger.info("Ask command executed", extra={"question": q, "planner": planner, "export": export})
-    typer.echo("Answer (placeholder)")
+        if dry_run:
+            # Show plan JSON and exit
+            plan_json = query_plan.model_dump()
+            typer.echo("\nPlan JSON:")
+            typer.echo(json.dumps(plan_json, indent=2))
+            logger.info("Dry run executed", extra={"question": q, "planner": planner})
+            return
+
+        if export:
+            typer.echo(f"Will export results to: {export}")
+
+        # TODO: executor.run(Plan) -> Answer+Evidence
+        logger.info(
+            "Ask command executed", extra={"question": q, "planner": planner, "export": export}
+        )
+        typer.echo("Answer (placeholder)")
+
+    except NotImplementedError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1) from e
+    except Exception as e:
+        typer.echo(f"Error creating plan: {e}", err=True)
+        logger.error(
+            "Ask command failed", extra={"error": str(e), "question": q, "planner": planner}
+        )
+        raise typer.Exit(1) from e
 
 
 @app.command()
