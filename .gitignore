@@ -98,10 +98,12 @@ reports/
 
 
 
-.data/
-data/
+/data/
+/artifacts/
+/.cache/
 .env
+
+.data/
 .ipynb_checkpoints/
 *.parquet
-artifacts/
 **/.venv/

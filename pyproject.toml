@@ -1,3 +1,6 @@
+[tool.poetry]
+package-mode = false
+
 [project]
 name = "synmax-data-agent"
 version = "0.1.0"
@@ -5,18 +8,50 @@ description = ""
 authors = [
     {name = "Your Name",email = "you@example.com"}
 ]
-readme = "README.md"
 requires-python = ">=3.10,<3.13"
 dependencies = [
-    "pandas (>=2.3.2,<3.0.0)",
-    "pyarrow (>=21.0.0,<22.0.0)",
-    "jupyterlab (>=4.4.7,<5.0.0)",
-    "ipykernel (>=6.30.1,<7.0.0)",
-    "polars (>=1.33.1,<2.0.0)",
-    "duckdb (>=1.4.0,<2.0.0)"
+    "polars>=1.33.1",
+    "pyarrow>=21.0.0",
+    "duckdb>=1.4.0",
+    "typer>=0.12.0",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "orjson>=3.9.0",
+    "ruamel.yaml>=0.18.0",
+    "numpy>=1.24.0",
+    "scikit-learn>=1.3.0",
+    "ruptures>=1.1.0",
+    "tdigest>=0.5.0",
+    "rich>=13.0.0",
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "mypy>=1.5.0",
+    "ruff>=0.1.0",
+    "black>=23.0.0"
 ]
 
+[project.scripts]
+agent = "data_agent.cli:app"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E","F","I","UP","B","N","Q"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
