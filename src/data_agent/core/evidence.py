@@ -8,15 +8,16 @@ from typing import Any
 
 import polars as pl
 
+from ..rules.engine import run_rules
 from .plan_schema import Plan
 
 
 def _digest(parquet_path: Path) -> str:
     """Generate a lightweight digest of a parquet file.
-    
+
     Args:
         parquet_path: Path to parquet file
-        
+
     Returns:
         Short hex digest of file metadata
     """
@@ -28,15 +29,17 @@ def _digest(parquet_path: Path) -> str:
         return "unknown"
 
 
-def build_evidence(lf: pl.LazyFrame, plan: Plan, df: pl.DataFrame, timings: dict[str, float]) -> dict[str, Any]:
+def build_evidence(
+    lf: pl.LazyFrame, plan: Plan, df: pl.DataFrame, timings: dict[str, float]
+) -> dict[str, Any]:
     """Build evidence card for query results.
-    
+
     Args:
         lf: Original lazy frame
         plan: Query plan executed
         df: Result dataframe
         timings: Timing measurements
-        
+
     Returns:
         Evidence dictionary
     """
@@ -44,19 +47,27 @@ def build_evidence(lf: pl.LazyFrame, plan: Plan, df: pl.DataFrame, timings: dict
     cols_used = set()
     for f in plan.filters:
         cols_used.add(f.column)
-    
+
     if plan.aggregate:
         for m in plan.aggregate.metrics:
             cols_used.add(m["col"])
         cols_used.update(plan.aggregate.groupby)
-    
+
     if plan.sort:
         cols_used.update(plan.sort.by)
-    
+
     # Compute missingness for used columns
     # For now, we'll set to None as computing null rates requires scanning the data
     missingness = {c: None for c in sorted(cols_used)}
-    
+
+    # Run data quality rules and include summary
+    rules_results = run_rules(lf)
+    rules_summary = {
+        rule_id: {"count": result["count"], "samples": result["samples"][:3]}
+        for rule_id, result in rules_results.items()
+        if result["count"] > 0
+    }
+
     # Build evidence dictionary
     evidence = {
         "filters": [f.model_dump() for f in plan.filters],
@@ -65,23 +76,21 @@ def build_evidence(lf: pl.LazyFrame, plan: Plan, df: pl.DataFrame, timings: dict
         "rows_out": int(df.height),
         "columns": list(df.columns),
         "missingness": missingness,
+        "rules": rules_summary,
         "timings_ms": {k: round(v * 1000, 1) for k, v in timings.items()},
         "cache": {"hit": False},
-        "repro": {
-            "engine": "polars",
-            "snippet": _generate_repro_snippet(plan)
-        },
+        "repro": {"engine": "polars", "snippet": _generate_repro_snippet(plan)},
     }
-    
+
     return evidence
 
 
 def _generate_repro_snippet(plan: Plan) -> str:
     """Generate a reproducible code snippet for the query.
-    
+
     Args:
         plan: Query plan
-        
+
     Returns:
         Python code snippet
     """
@@ -89,9 +98,9 @@ def _generate_repro_snippet(plan: Plan) -> str:
         "import polars as pl",
         "lf = pl.scan_parquet('path/to/data.parquet')",
         "res = (",
-        "  lf"
+        "  lf",
     ]
-    
+
     # Add filters
     for f in plan.filters:
         if f.op == "=":
@@ -99,27 +108,29 @@ def _generate_repro_snippet(plan: Plan) -> str:
         elif f.op == "between":
             lo, hi = f.value
             # Handle Polars date objects specially
-            if hasattr(lo, 'year'):  # Polars date object
+            if hasattr(lo, "year"):  # Polars date object
                 lo_str = f"pl.date({lo.year}, {lo.month}, {lo.day})"
             else:
                 lo_str = repr(lo)
-            if hasattr(hi, 'year'):  # Polars date object
+            if hasattr(hi, "year"):  # Polars date object
                 hi_str = f"pl.date({hi.year}, {hi.month}, {hi.day})"
             else:
                 hi_str = repr(hi)
-            lines.append(f"    .filter((pl.col('{f.column}') >= {lo_str}) & (pl.col('{f.column}') <= {hi_str}))")
+            filter_expr = f"(pl.col('{f.column}') >= {lo_str}) & (pl.col('{f.column}') <= {hi_str})"
+            lines.append(f"    .filter({filter_expr})")
         elif f.op == "in":
             lines.append(f"    .filter(pl.col('{f.column}').is_in({repr(f.value)}))")
         elif f.op == "is_not_null":
             lines.append(f"    .filter(pl.col('{f.column}').is_not_null())")
         elif f.op == "contains":
-            lines.append(f"    .filter(pl.col('{f.column}').cast(pl.Utf8).str.contains({repr(str(f.value))}))")
-    
+            contains_expr = f"pl.col('{f.column}').cast(pl.Utf8).str.contains({repr(str(f.value))})"
+            lines.append(f"    .filter({contains_expr})")
+
     # Add aggregation
     if plan.aggregate:
         if plan.aggregate.groupby:
             lines.append(f"    .group_by({repr(plan.aggregate.groupby)})")
-        
+
         aggs = []
         for m in plan.aggregate.metrics:
             col, fn = m["col"], m["fn"].lower()
@@ -133,25 +144,22 @@ def _generate_repro_snippet(plan: Plan) -> str:
                 aggs.append(f"pl.col('{col}').quantile(0.95).alias('p95_{col}')")
             elif fn == "p50":
                 aggs.append(f"pl.col('{col}').median().alias('p50_{col}')")
-        
+
         if plan.aggregate.groupby:
             lines.append(f"    .agg([{', '.join(aggs)}])")
         else:
             lines.append(f"    .select([{', '.join(aggs)}])")
-    
+
     # Add sorting
     if plan.sort:
         by = plan.sort.by
         desc = plan.sort.desc
         limit = plan.sort.limit
-        
+
         lines.append(f"    .sort(by={repr(by)}, descending={desc})")
         if limit:
             lines.append(f"    .head({limit})")
-    
-    lines.extend([
-        ").collect()",
-        "print(res)"
-    ])
-    
+
+    lines.extend([").collect()", "print(res)"])
+
     return "\n".join(lines)

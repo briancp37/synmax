@@ -83,8 +83,8 @@ def ask(
     """Ask a natural-language question about the dataset."""
     import json
 
-    from data_agent.core.planner import plan as create_plan
     from data_agent.core.executor import run
+    from data_agent.core.planner import plan as create_plan
     from data_agent.ingest.loader import load_dataset
 
     typer.echo(f"Question: {q}")
@@ -116,27 +116,31 @@ def ask(
         typer.echo("\nEvidence Card:")
         typer.echo(f"• Rows out: {answer.evidence['rows_out']:,}")
         typer.echo(f"• Columns: {', '.join(answer.evidence['columns'])}")
-        
-        if answer.evidence['filters']:
+
+        if answer.evidence["filters"]:
             typer.echo("• Filters applied:")
-            for f in answer.evidence['filters']:
+            for f in answer.evidence["filters"]:
                 typer.echo(f"  - {f['column']} {f['op']} {f['value']}")
-        
-        if answer.evidence['aggregate']:
-            agg = answer.evidence['aggregate']
-            if agg['groupby']:
+
+        if answer.evidence["aggregate"]:
+            agg = answer.evidence["aggregate"]
+            if agg["groupby"]:
                 typer.echo(f"• Grouped by: {', '.join(agg['groupby'])}")
             typer.echo("• Metrics:")
-            for m in agg['metrics']:
+            for m in agg["metrics"]:
                 typer.echo(f"  - {m['fn']}({m['col']})")
-        
-        if answer.evidence['sort']:
-            sort = answer.evidence['sort']
-            typer.echo(f"• Sorted by: {', '.join(sort['by'])} ({'desc' if sort['desc'] else 'asc'})")
-            if sort['limit']:
+
+        if answer.evidence["sort"]:
+            sort = answer.evidence["sort"]
+            typer.echo(
+                f"• Sorted by: {', '.join(sort['by'])} ({'desc' if sort['desc'] else 'asc'})"
+            )
+            if sort["limit"]:
                 typer.echo(f"• Limited to: {sort['limit']} rows")
-        
-        typer.echo(f"• Runtime: {answer.evidence['timings_ms']['plan']:.1f}ms plan, {answer.evidence['timings_ms']['collect']:.1f}ms collect")
+
+        plan_time = answer.evidence["timings_ms"]["plan"]
+        collect_time = answer.evidence["timings_ms"]["collect"]
+        typer.echo(f"• Runtime: {plan_time:.1f}ms plan, {collect_time:.1f}ms collect")
         typer.echo(f"• Cache: {'hit' if answer.evidence['cache']['hit'] else 'miss'}")
 
         if export:
@@ -144,23 +148,20 @@ def ask(
             export_data = {
                 "question": q,
                 "plan": query_plan.model_dump(),
-                "answer": {
-                    "table": answer.table.to_dicts(),
-                    "evidence": answer.evidence
-                }
+                "answer": {"table": answer.table.to_dicts(), "evidence": answer.evidence},
             }
-            with open(export, 'w') as f:
+            with open(export, "w") as f:
                 json.dump(export_data, f, indent=2, default=str)
             typer.echo(f"\nResults exported to: {export}")
 
         logger.info(
-            "Ask command executed", 
+            "Ask command executed",
             extra={
-                "question": q, 
-                "planner": planner, 
+                "question": q,
+                "planner": planner,
                 "export": export,
-                "rows_out": answer.evidence['rows_out']
-            }
+                "rows_out": answer.evidence["rows_out"],
+            },
         )
 
     except NotImplementedError as e:
@@ -182,16 +183,91 @@ def rules(
     since: Optional[str] = typer.Option(None, "--since", help="Show rules since date (YYYY-MM-DD)"),
 ) -> None:
     """Run data quality rules and show violations."""
-    typer.echo("Running data quality rules...")
+    try:
+        from pathlib import Path
 
-    if pipeline:
-        typer.echo(f"Filtering by pipeline: {pipeline}")
-    if since:
-        typer.echo(f"Since date: {since}")
+        from rich.console import Console
+        from rich.table import Table
 
-    # TODO: rules.engine.run_rules(pipeline=pipeline, since=since)
-    logger.info("Rules command executed", extra={"pipeline": pipeline, "since": since})
-    typer.echo("Rules scan (placeholder)")
+        from data_agent.ingest.loader import load_dataset
+        from data_agent.rules.engine import run_rules
+
+        console = Console()
+
+        # Try to load from default path first, then fallback to examples/golden.parquet
+        from data_agent.config import DATA_PATH
+
+        dataset_path = None
+        if DATA_PATH.exists():
+            dataset_path = str(DATA_PATH)
+        elif Path("examples/golden.parquet").exists():
+            dataset_path = "examples/golden.parquet"
+
+        with console.status("Loading dataset..."):
+            lf = load_dataset(path=dataset_path, auto=False)
+
+        console.print("Running data quality rules...")
+        if pipeline:
+            console.print(f"Filtering by pipeline: {pipeline}")
+        if since:
+            console.print(f"Since date: {since}")
+
+        with console.status("Analyzing data..."):
+            results = run_rules(lf, pipeline=pipeline, since=since)
+
+        # Create a table to display results
+        table = Table(title="Data Quality Rules Summary")
+        table.add_column("Rule ID", style="cyan", no_wrap=True)
+        table.add_column("Description", style="magenta")
+        table.add_column("Violations", justify="right", style="red")
+        table.add_column("Sample Count", justify="right", style="yellow")
+
+        # Rule descriptions
+        rule_descriptions = {
+            "R-001": "Missing Geo on Active",
+            "R-002": "Duplicate loc_name across states",
+            "R-003": "Zero-quantity streaks",
+            "R-004": "Pipeline Imbalance (daily)",
+            "R-005": "Schema mismatch",
+            "R-006": "Eff gas day gaps",
+        }
+
+        total_violations = 0
+        for rule_id, result in results.items():
+            count = result["count"]
+            samples_count = len(result["samples"])
+            total_violations += count
+
+            table.add_row(
+                rule_id,
+                rule_descriptions.get(rule_id, "Unknown rule"),
+                str(count),
+                str(samples_count),
+            )
+
+        console.print(table)
+        console.print(f"\n[bold]Total violations found: {total_violations}[/bold]")
+
+        # Show samples for rules with violations
+        for rule_id, result in results.items():
+            if result["count"] > 0 and result["samples"]:
+                rule_desc = rule_descriptions.get(rule_id, "Unknown rule")
+                console.print(f"\n[bold cyan]{rule_id} - {rule_desc} Samples:[/bold cyan]")
+                for i, sample in enumerate(result["samples"][:3], 1):
+                    console.print(f"  Sample {i}: {sample}")
+
+        logger.info(
+            "Rules command executed",
+            extra={"pipeline": pipeline, "since": since, "total_violations": total_violations},
+        )
+
+    except FileNotFoundError as e:
+        console.print("[red]Error: Dataset not found. Please run 'agent load' first.[/red]")
+        raise typer.Exit(1) from e
+    except Exception as e:
+        console.print(f"[red]Error running rules: {e}[/red]")
+        logger.error("Rules command failed", extra={"error": str(e)})
+        raise typer.Exit(1) from e
 
 
 @app.command()

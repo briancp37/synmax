@@ -65,6 +65,7 @@ def setup_logging(level: str = "INFO", structured: bool = True) -> logging.Logge
     handler.setLevel(numeric_level)
 
     # Set formatter
+    formatter: logging.Formatter
     if structured:
         formatter = StructuredFormatter()
     else:

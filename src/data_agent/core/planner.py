@@ -56,7 +56,8 @@ def plan(q: str, deterministic: bool = True) -> Plan:
         if key == "sum_deliveries_on_date":
             pipeline, d = m.group(1).strip(), m.group(2)
             import polars as pl
-            year, month, day = map(int, d.split('-'))
+
+            year, month, day = map(int, d.split("-"))
             date_val = pl.date(year, month, day)
             return Plan(
                 filters=[
@@ -70,12 +71,17 @@ def plan(q: str, deterministic: bool = True) -> Plan:
             )
 
         elif key == "top_states_year":
-            n, year = int(m.group(1)), m.group(2)
+            n = int(m.group(1))
+            year_str = m.group(2)
+            year = int(year_str)
             import polars as pl
+
             return Plan(
                 filters=[
                     Filter(
-                        column="eff_gas_day", op="between", value=[pl.date(int(year), 1, 1), pl.date(int(year), 12, 31)]
+                        column="eff_gas_day",
+                        op="between",
+                        value=[pl.date(year, 1, 1), pl.date(year, 12, 31)],
                     )
                 ],
                 aggregate=Aggregate(
@@ -87,15 +93,18 @@ def plan(q: str, deterministic: bool = True) -> Plan:
         elif key == "deliveries_date_range":
             pipeline, start_date, end_date = m.group(1).strip(), m.group(2), m.group(3)
             import polars as pl
-            start_year, start_month, start_day = map(int, start_date.split('-'))
-            end_year, end_month, end_day = map(int, end_date.split('-'))
+
+            start_year, start_month, start_day = map(int, start_date.split("-"))
+            end_year, end_month, end_day = map(int, end_date.split("-"))
             start_date_val = pl.date(start_year, start_month, start_day)
             end_date_val = pl.date(end_year, end_month, end_day)
             return Plan(
                 filters=[
                     Filter(column="pipeline_name", op="=", value=pipeline),
                     Filter(column="rec_del_sign", op="=", value=-1),  # -1 for deliveries
-                    Filter(column="eff_gas_day", op="between", value=[start_date_val, end_date_val]),
+                    Filter(
+                        column="eff_gas_day", op="between", value=[start_date_val, end_date_val]
+                    ),
                 ],
                 aggregate=Aggregate(
                     groupby=["eff_gas_day"], metrics=[{"col": "scheduled_quantity", "fn": "sum"}]
