@@ -107,3 +107,7 @@ reports/
 .ipynb_checkpoints/
 *.parquet
 **/.venv/
+
+# Output files
+output.json
+*.output.json

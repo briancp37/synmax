@@ -58,7 +58,8 @@ def test_ask_command():
     assert result.exit_code == 0
     assert "Question: What is the total flow for Texas?" in result.stdout
     assert "Using planner: deterministic" in result.stdout
-    assert "Answer (placeholder)" in result.stdout
+    assert "Answer:" in result.stdout
+    assert "Evidence Card:" in result.stdout
 
 
 def test_ask_command_with_planner():
@@ -73,7 +74,7 @@ def test_ask_command_with_export():
     """Test ask command with export option."""
     result = runner.invoke(app, ["ask", "test question", "--export", "output.json"])
     assert result.exit_code == 0
-    assert "Will export results to: output.json" in result.stdout
+    assert "Results exported to: output.json" in result.stdout
 
 
 def test_rules_command():

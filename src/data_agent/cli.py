@@ -84,6 +84,8 @@ def ask(
     import json
 
     from data_agent.core.planner import plan as create_plan
+    from data_agent.core.executor import run
+    from data_agent.ingest.loader import load_dataset
 
     typer.echo(f"Question: {q}")
     typer.echo(f"Using planner: {planner}")
@@ -100,20 +102,72 @@ def ask(
             logger.info("Dry run executed", extra={"question": q, "planner": planner})
             return
 
-        if export:
-            typer.echo(f"Will export results to: {export}")
+        # Load the dataset (use golden dataset for now)
+        lf = load_dataset("examples/golden.parquet", False)
 
-        # TODO: executor.run(Plan) -> Answer+Evidence
+        # Execute the plan
+        answer = run(lf, query_plan)
+
+        # Display results
+        typer.echo("\nAnswer:")
+        typer.echo(answer.table)
+
+        # Display evidence card
+        typer.echo("\nEvidence Card:")
+        typer.echo(f"• Rows out: {answer.evidence['rows_out']:,}")
+        typer.echo(f"• Columns: {', '.join(answer.evidence['columns'])}")
+        
+        if answer.evidence['filters']:
+            typer.echo("• Filters applied:")
+            for f in answer.evidence['filters']:
+                typer.echo(f"  - {f['column']} {f['op']} {f['value']}")
+        
+        if answer.evidence['aggregate']:
+            agg = answer.evidence['aggregate']
+            if agg['groupby']:
+                typer.echo(f"• Grouped by: {', '.join(agg['groupby'])}")
+            typer.echo("• Metrics:")
+            for m in agg['metrics']:
+                typer.echo(f"  - {m['fn']}({m['col']})")
+        
+        if answer.evidence['sort']:
+            sort = answer.evidence['sort']
+            typer.echo(f"• Sorted by: {', '.join(sort['by'])} ({'desc' if sort['desc'] else 'asc'})")
+            if sort['limit']:
+                typer.echo(f"• Limited to: {sort['limit']} rows")
+        
+        typer.echo(f"• Runtime: {answer.evidence['timings_ms']['plan']:.1f}ms plan, {answer.evidence['timings_ms']['collect']:.1f}ms collect")
+        typer.echo(f"• Cache: {'hit' if answer.evidence['cache']['hit'] else 'miss'}")
+
+        if export:
+            # Export results to JSON
+            export_data = {
+                "question": q,
+                "plan": query_plan.model_dump(),
+                "answer": {
+                    "table": answer.table.to_dicts(),
+                    "evidence": answer.evidence
+                }
+            }
+            with open(export, 'w') as f:
+                json.dump(export_data, f, indent=2, default=str)
+            typer.echo(f"\nResults exported to: {export}")
+
         logger.info(
-            "Ask command executed", extra={"question": q, "planner": planner, "export": export}
+            "Ask command executed", 
+            extra={
+                "question": q, 
+                "planner": planner, 
+                "export": export,
+                "rows_out": answer.evidence['rows_out']
+            }
         )
-        typer.echo("Answer (placeholder)")
 
     except NotImplementedError as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(1) from e
     except Exception as e:
-        typer.echo(f"Error creating plan: {e}", err=True)
+        typer.echo(f"Error: {e}", err=True)
         logger.error(
             "Ask command failed", extra={"error": str(e), "question": q, "planner": planner}
         )
