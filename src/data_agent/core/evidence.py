@@ -30,7 +30,11 @@ def _digest(parquet_path: Path) -> str:
 
 
 def build_evidence(
-    lf: pl.LazyFrame, plan: Plan, df: pl.DataFrame, timings: dict[str, float]
+    lf: pl.LazyFrame,
+    plan: Plan,
+    df: pl.DataFrame,
+    timings: dict[str, float],
+    cache_hit: bool = False,
 ) -> dict[str, Any]:
     """Build evidence card for query results.
 
@@ -39,6 +43,7 @@ def build_evidence(
         plan: Query plan executed
         df: Result dataframe
         timings: Timing measurements
+        cache_hit: Whether this result was served from cache
 
     Returns:
         Evidence dictionary
@@ -68,9 +73,24 @@ def build_evidence(
         if result["count"] > 0
     }
 
-    # Build evidence dictionary
+    # Build evidence dictionary with serializable filter values
+    def _serialize_filter_value(value):
+        """Convert filter values to serializable format."""
+        if hasattr(value, "__class__") and "Expr" in str(value.__class__):
+            return str(value)
+        elif isinstance(value, (list, tuple)):
+            return [_serialize_filter_value(v) for v in value]
+        else:
+            return value
+
+    serializable_filters = []
+    for f in plan.filters:
+        filter_dict = f.model_dump()
+        filter_dict["value"] = _serialize_filter_value(filter_dict["value"])
+        serializable_filters.append(filter_dict)
+
     evidence = {
-        "filters": [f.model_dump() for f in plan.filters],
+        "filters": serializable_filters,
         "aggregate": plan.aggregate.model_dump() if plan.aggregate else None,
         "sort": plan.sort.model_dump() if plan.sort else None,
         "rows_out": int(df.height),
@@ -78,7 +98,7 @@ def build_evidence(
         "missingness": missingness,
         "rules": rules_summary,
         "timings_ms": {k: round(v * 1000, 1) for k, v in timings.items()},
-        "cache": {"hit": False},
+        "cache": {"hit": cache_hit},
         "repro": {"engine": "polars", "snippet": _generate_repro_snippet(plan)},
     }
 
