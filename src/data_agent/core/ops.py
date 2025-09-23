@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import polars as pl
 
+from .metrics import imbalance_pct, ramp_risk, reversal_freq
 from .plan_schema import Plan
 
 
@@ -25,7 +26,13 @@ def apply_plan(lf: pl.LazyFrame, plan: Plan) -> pl.LazyFrame:
             out = out.filter(pl.col(f.column) == f.value)
         elif f.op == "between":
             lo, hi = f.value
-            out = out.filter((pl.col(f.column) >= lo) & (pl.col(f.column) <= hi))
+            # Handle date strings by converting to date literals
+            if f.column == "eff_gas_day":
+                lo_date = pl.lit(lo).str.to_date() if isinstance(lo, str) else pl.lit(lo)
+                hi_date = pl.lit(hi).str.to_date() if isinstance(hi, str) else pl.lit(hi)
+                out = out.filter((pl.col(f.column) >= lo_date) & (pl.col(f.column) <= hi_date))
+            else:
+                out = out.filter((pl.col(f.column) >= lo) & (pl.col(f.column) <= hi))
         elif f.op == "in":
             out = out.filter(pl.col(f.column).is_in(f.value))
         elif f.op == "is_not_null":
@@ -38,6 +45,18 @@ def apply_plan(lf: pl.LazyFrame, plan: Plan) -> pl.LazyFrame:
         # For now, resampling is handled by using daily rollups
         # This would be implemented with groupby_dynamic in a full implementation
         pass
+
+    # Apply analytics operation if specified
+    if plan.op == "metric_compute":
+        metric_name = plan.op_args.get("name")
+        if metric_name == "ramp_risk":
+            return ramp_risk(out)
+        elif metric_name == "reversal_freq":
+            return reversal_freq(out)
+        elif metric_name == "imbalance_pct":
+            return imbalance_pct(out)
+        else:
+            raise ValueError(f"Unknown metric: {metric_name}")
 
     # Apply aggregation
     if plan.aggregate:
