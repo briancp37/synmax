@@ -98,12 +98,17 @@ def ask(
             # Show plan JSON and exit
             plan_json = query_plan.model_dump()
             typer.echo("\nPlan JSON:")
-            typer.echo(json.dumps(plan_json, indent=2))
+            # Use custom serializer to handle Polars expressions
+            typer.echo(json.dumps(plan_json, indent=2, default=str))
             logger.info("Dry run executed", extra={"question": q, "planner": planner})
             return
 
-        # Load the dataset (use golden dataset for now)
-        lf = load_dataset("examples/golden.parquet", False)
+        # Load the dataset - use real data if available, otherwise golden dataset
+        from data_agent.config import DATA_PATH
+        if DATA_PATH.exists():
+            lf = load_dataset(str(DATA_PATH), False)
+        else:
+            lf = load_dataset("examples/golden.parquet", False)
 
         # Execute the plan
         answer = run(lf, query_plan)
