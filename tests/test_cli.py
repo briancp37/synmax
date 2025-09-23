@@ -54,9 +54,10 @@ def test_load_command_success():
 
 def test_ask_command():
     """Test ask command."""
-    result = runner.invoke(app, ["ask", "What is the total flow for Texas?"])
+    # Use a query that matches a deterministic pattern to avoid processing full dataset
+    result = runner.invoke(app, ["ask", "total receipts for ANR"])
     assert result.exit_code == 0
-    assert "Question: What is the total flow for Texas?" in result.stdout
+    assert "Question: total receipts for ANR" in result.stdout
     assert "Using planner: deterministic" in result.stdout
     assert "Answer:" in result.stdout
     assert "Evidence Card:" in result.stdout
@@ -75,7 +76,10 @@ def test_ask_command_with_planner():
 
 def test_ask_command_with_export():
     """Test ask command with export option."""
-    result = runner.invoke(app, ["ask", "test question", "--export", "output.json"])
+    # Use a query that matches a deterministic pattern to avoid processing full dataset
+    result = runner.invoke(
+        app, ["ask", "sum of deliveries for ANR on 2022-01-01", "--export", "output.json"]
+    )
     assert result.exit_code == 0
     assert "Results exported to: output.json" in result.stdout
 
@@ -157,7 +161,8 @@ def test_cache_command_stats():
     """Test cache stats command."""
     result = runner.invoke(app, ["cache", "--stats"])
     assert result.exit_code == 0
-    assert "Cache statistics (placeholder)" in result.stdout
+    assert "Cache Statistics:" in result.stdout
+    assert "Total files:" in result.stdout
 
 
 def test_cache_command_conflicting_options():

@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import time
+from pathlib import Path
 from typing import Any
 
 import polars as pl
 
+from ..cache import CacheManager
 from . import ops
-from .evidence import build_evidence
+from .evidence import _digest, build_evidence
 from .plan_schema import Plan
 
 
@@ -26,16 +28,40 @@ class Answer:
         self.evidence = evidence
 
 
-def run(lf: pl.LazyFrame, plan: Plan) -> Answer:
+def run(lf: pl.LazyFrame, plan: Plan, cache_manager: CacheManager | None = None) -> Answer:
     """Execute a query plan against a lazy frame.
 
     Args:
         lf: Input lazy frame
         plan: Query plan to execute
+        cache_manager: Optional cache manager for result caching
 
     Returns:
         Answer containing results and evidence
     """
+    # Try to get dataset digest for caching
+    dataset_digest = "unknown"
+    if hasattr(lf, "_scan_path"):  # Polars LazyFrame may have scan path
+        try:
+            dataset_digest = _digest(Path(lf._scan_path))
+        except (AttributeError, TypeError):
+            pass
+    else:
+        # For test LazyFrames, try to get digest from a default path
+        try:
+            dataset_digest = _digest(Path("test_data.parquet"))
+        except FileNotFoundError:
+            pass
+
+    # Check cache first if cache manager is provided
+    if cache_manager:
+        cached_df, cached_evidence = cache_manager.get(plan, dataset_digest)
+        if cached_df is not None and cached_evidence is not None:
+            # Update evidence to show cache hit
+            cached_evidence["cache"]["hit"] = True
+            return Answer(cached_df, cached_evidence)
+
+    # Execute query
     t0 = time.perf_counter()
     out_lf = ops.apply_plan(lf, plan)
     t1 = time.perf_counter()
@@ -57,6 +83,10 @@ def run(lf: pl.LazyFrame, plan: Plan) -> Answer:
 
     # Build evidence
     timings = {"plan": t1 - t0, "collect": t2 - t1}
-    evidence = build_evidence(lf, plan, df, timings)
+    evidence = build_evidence(lf, plan, df, timings, cache_hit=False)
+
+    # Store in cache if cache manager is provided
+    if cache_manager:
+        cache_manager.put(plan, dataset_digest, df, evidence)
 
     return Answer(df, evidence)

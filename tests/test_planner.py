@@ -376,7 +376,7 @@ class TestLLMPlanner:
 
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
-        
+
         # Mock tool_calls structure
         mock_tool_call = MagicMock()
         mock_tool_call.function.arguments = json.dumps(

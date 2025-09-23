@@ -50,7 +50,17 @@ PLAN_FUNCTION_SCHEMA = {
                         "column": {"type": "string", "description": "Column name to filter on"},
                         "op": {
                             "type": "string",
-                            "enum": ["=", "in", "between", "is_not_null", "contains", ">=", ">", "<=", "<"],
+                            "enum": [
+                                "=",
+                                "in",
+                                "between",
+                                "is_not_null",
+                                "contains",
+                                ">=",
+                                ">",
+                                "<=",
+                                "<",
+                            ],
                             "description": "Filter operation",
                         },
                         "value": {"description": "Filter value (can be any type)"},
@@ -168,7 +178,7 @@ def _normalize_plan_data(plan_data: dict[str, Any]) -> dict[str, Any]:
                 if re.match(r"^\d{4}-\d{2}-\d{2}$", value):
                     year, month, day = map(int, value.split("-"))
                     date_val = pl.date(year, month, day)
-                    
+
                     if op == "=":
                         # Convert single date to between range
                         filter_item["op"] = "between"
@@ -196,11 +206,18 @@ def _normalize_plan_data(plan_data: dict[str, Any]) -> dict[str, Any]:
                     else:
                         # For other ops, just convert the value
                         filter_item["value"] = date_val
-                        
+
             # Handle between with date strings
-            elif column == "eff_gas_day" and op == "between" and isinstance(value, list) and len(value) == 2:
+            elif (
+                column == "eff_gas_day"
+                and op == "between"
+                and isinstance(value, list)
+                and len(value) == 2
+            ):
                 if isinstance(value[0], str) and isinstance(value[1], str):
-                    if re.match(r"^\d{4}-\d{2}-\d{2}$", value[0]) and re.match(r"^\d{4}-\d{2}-\d{2}$", value[1]):
+                    if re.match(r"^\d{4}-\d{2}-\d{2}$", value[0]) and re.match(
+                        r"^\d{4}-\d{2}-\d{2}$", value[1]
+                    ):
                         start_year, start_month, start_day = map(int, value[0].split("-"))
                         end_year, end_month, end_day = map(int, value[1].split("-"))
                         filter_item["value"] = [
@@ -226,7 +243,17 @@ def _validate_plan_json(plan_data: dict[str, Any]) -> bool:
             for filter_item in plan_data["filters"]:
                 if filter_item.get("column") not in VALID_COLUMNS:
                     return False
-                if filter_item.get("op") not in ["=", "in", "between", "is_not_null", "contains", ">=", ">", "<=", "<"]:
+                if filter_item.get("op") not in [
+                    "=",
+                    "in",
+                    "between",
+                    "is_not_null",
+                    "contains",
+                    ">=",
+                    ">",
+                    "<=",
+                    "<",
+                ]:
                     return False
 
         # Check aggregate references valid columns

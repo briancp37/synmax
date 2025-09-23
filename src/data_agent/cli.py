@@ -2,6 +2,7 @@
 
 from typing import Optional
 
+import orjson
 import typer
 
 from data_agent import config
@@ -83,6 +84,7 @@ def ask(
     """Ask a natural-language question about the dataset."""
     import json
 
+    from data_agent.cache import CacheManager
     from data_agent.core.executor import run
     from data_agent.core.planner import plan as create_plan
     from data_agent.ingest.loader import load_dataset
@@ -105,13 +107,17 @@ def ask(
 
         # Load the dataset - use real data if available, otherwise golden dataset
         from data_agent.config import DATA_PATH
+
         if DATA_PATH.exists():
             lf = load_dataset(str(DATA_PATH), False)
         else:
             lf = load_dataset("examples/golden.parquet", False)
 
+        # Create cache manager
+        cache_manager = CacheManager()
+
         # Execute the plan
-        answer = run(lf, query_plan)
+        answer = run(lf, query_plan, cache_manager)
 
         # Display results
         typer.echo("\nAnswer:")
@@ -150,9 +156,11 @@ def ask(
 
         if export:
             # Export results to JSON
+            # Convert plan to dict and serialize with orjson to handle Polars expressions
+            plan_dict = query_plan.model_dump()
             export_data = {
                 "question": q,
-                "plan": query_plan.model_dump(),
+                "plan": orjson.loads(orjson.dumps(plan_dict, default=str)),
                 "answer": {"table": answer.table.to_dicts(), "evidence": answer.evidence},
             }
             with open(export, "w") as f:
@@ -345,18 +353,28 @@ def cache(
     stats: bool = typer.Option(False, "--stats", help="Show cache statistics"),
 ) -> None:
     """Manage query result cache."""
+    from data_agent.cache import CacheManager
+
     if clear and stats:
         typer.echo("Cannot use --clear and --stats together")
         raise typer.Exit(1)
 
+    cache_manager = CacheManager()
+
     if clear:
-        # TODO: cache.clear_cache()
+        cache_manager.clear()
         typer.echo("Cache cleared")
         logger.info("Cache cleared")
     elif stats:
-        # TODO: cache.get_stats()
-        typer.echo("Cache statistics (placeholder)")
-        logger.info("Cache stats requested")
+        stats_data = cache_manager.stats()
+        typer.echo("Cache Statistics:")
+        typer.echo(f"  Total files: {stats_data['total_files']}")
+        typer.echo(f"  Parquet files: {stats_data['parquet_files']}")
+        typer.echo(f"  JSON files: {stats_data['json_files']}")
+        typer.echo(f"  Total size: {stats_data['total_size_bytes']:,} bytes")
+        typer.echo(f"  Valid entries: {stats_data['valid_entries']}")
+        typer.echo(f"  TTL: {stats_data['ttl_hours']} hours")
+        logger.info("Cache stats requested", extra=stats_data)
     else:
         typer.echo("Use --clear to clear cache or --stats to show statistics")
 
