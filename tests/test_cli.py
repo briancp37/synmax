@@ -63,11 +63,14 @@ def test_ask_command():
 
 
 def test_ask_command_with_planner():
-    """Test ask command with custom planner."""
-    result = runner.invoke(app, ["ask", "test question", "--planner", "llm"])
-    assert result.exit_code == 1  # Should fail because LLM planner is not implemented
+    """Test ask command with LLM planner (falls back to deterministic without API keys)."""
+    # Use a query that matches a deterministic pattern for fallback
+    result = runner.invoke(
+        app, ["ask", "sum of deliveries for ANR on 2022-01-01", "--planner", "llm"]
+    )
+    assert result.exit_code == 0  # Should succeed with fallback to deterministic
     assert "Using planner: llm" in result.stdout
-    assert "LLM-based planning not yet implemented" in result.stderr
+    assert "Answer:" in result.stdout
 
 
 def test_ask_command_with_export():
