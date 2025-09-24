@@ -93,6 +93,10 @@ def build_evidence(
         "filters": serializable_filters,
         "aggregate": plan.aggregate.model_dump() if plan.aggregate else None,
         "sort": plan.sort.model_dump() if plan.sort else None,
+        "operation": {
+            "type": plan.op,
+            "parameters": plan.op_args
+        } if plan.op else None,
         "rows_out": int(df.height),
         "columns": list(df.columns),
         "missingness": missingness,

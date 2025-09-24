@@ -79,10 +79,11 @@ def apply_plan(lf: pl.LazyFrame, plan: Plan) -> pl.LazyFrame:
         date_col = plan.op_args.get("date_col", "eff_gas_day")
         min_size = plan.op_args.get("min_size", 10)
         penalty = plan.op_args.get("penalty", 10.0)
+        min_confidence = plan.op_args.get("min_confidence", 0.7)
 
         # Run changepoint detection and return as lazy frame
         changepoints_df = changepoint_detection(
-            out, groupby_cols, value_col, date_col, min_size, penalty
+            out, groupby_cols, value_col, date_col, min_size, penalty, min_confidence
         )
         return changepoints_df.lazy()
 

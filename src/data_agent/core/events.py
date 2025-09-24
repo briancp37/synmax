@@ -15,6 +15,7 @@ def changepoint_detection(
     date_col: str = "eff_gas_day",
     min_size: int = 10,
     penalty: float = 10.0,
+    min_confidence: float = 0.7,
 ) -> pl.DataFrame:
     """Detect change points in time series data using ruptures PELT algorithm.
 
@@ -25,17 +26,22 @@ def changepoint_detection(
         date_col: Column containing dates
         min_size: Minimum segment size for change point detection
         penalty: Penalty parameter for PELT algorithm (higher = fewer change points)
+        min_confidence: Minimum confidence threshold for returned change points (default 0.7)
 
     Returns:
-        DataFrame with change point events and statistics
+        DataFrame with change point events and statistics (filtered by min_confidence)
     """
     # Collect the data for change point analysis
     if groupby_cols:
-        # Group by specified columns and aggregate by date
+        # Group by specified columns and aggregate by date (avoid duplicates)
+        group_cols = list(groupby_cols)
+        if date_col not in group_cols:
+            group_cols.append(date_col)
+        
         df = (
-            lf.group_by(groupby_cols + [date_col])
+            lf.group_by(group_cols)
             .agg(pl.col(value_col).sum().alias("total_value"))
-            .sort(groupby_cols + [date_col])
+            .sort(group_cols)
             .collect()
         )
     else:
@@ -109,7 +115,12 @@ def changepoint_detection(
 
         return pl.DataFrame(schema=schema)
 
-    return pl.DataFrame(events)
+    # Create DataFrame and apply confidence filtering
+    df = pl.DataFrame(events)
+    if not df.is_empty() and min_confidence > 0:
+        df = df.filter(pl.col("confidence") >= min_confidence)
+    
+    return df
 
 
 def _detect_changepoints_for_series(
