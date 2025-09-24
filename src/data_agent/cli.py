@@ -47,7 +47,9 @@ def load(
         rollups_path = write_daily_rollups(rollups_df)
 
         # Print schema information
-        typer.echo(f"Loaded dataset from: {path or 'data/data.parquet'}")
+        from data_agent.ingest.loader import DEFAULT_DATA_PATH
+
+        typer.echo(f"Loaded dataset from: {path or str(DEFAULT_DATA_PATH)}")
         typer.echo(f"Rows: {data_dict['n_rows']:,}")
         typer.echo(f"Columns: {len(data_dict['schema'])}")
         typer.echo("\nSchema:")

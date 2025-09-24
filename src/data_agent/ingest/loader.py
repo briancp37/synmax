@@ -5,9 +5,33 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import gdown  # type: ignore
 import polars as pl
 
-DEFAULT_DATA_PATH = Path("data/data.parquet")
+DEFAULT_DATA_PATH = Path("data/pipeline_data.parquet")
+GOOGLE_DRIVE_URL = "https://drive.google.com/uc?id=109vhmnSLN3oofjFdyb58l_rUZRa0d6C8"
+
+
+def _download_dataset(output_path: Path) -> None:
+    """Download dataset from Google Drive to the specified path.
+
+    Args:
+        output_path: Path where the downloaded file should be saved.
+
+    Raises:
+        Exception: If download fails for any reason.
+    """
+    # Ensure the parent directory exists
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Download from Google Drive using gdown
+    print(f"Downloading dataset from Google Drive to {output_path}...")
+    gdown.download(GOOGLE_DRIVE_URL, str(output_path), quiet=False)
+
+    if not output_path.exists():
+        raise FileNotFoundError(f"Download failed: {output_path} was not created")
+
+    print(f"Successfully downloaded dataset to {output_path}")
 
 
 def load_dataset(path: str | None, auto: bool) -> pl.LazyFrame:
@@ -28,9 +52,12 @@ def load_dataset(path: str | None, auto: bool) -> pl.LazyFrame:
     if not p.exists():
         if not auto:
             raise FileNotFoundError(f"{p} not found; pass --auto to download")
-        # TODO: download via requests/gdown into p
-        # For now, we'll assume the user provides the data
-        raise FileNotFoundError(f"{p} not found and auto-download not implemented yet")
+
+        # Auto-download from Google Drive
+        try:
+            _download_dataset(p)
+        except Exception as e:
+            raise FileNotFoundError(f"Failed to download dataset to {p}: {e}") from e
 
     lf = pl.scan_parquet(str(p))
 
