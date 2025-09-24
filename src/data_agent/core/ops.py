@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import polars as pl
 
+from .cluster import run_cluster_analysis
 from .events import changepoint_detection
 from .metrics import imbalance_pct, ramp_risk, reversal_freq
 from .plan_schema import Plan
@@ -86,6 +87,16 @@ def apply_plan(lf: pl.LazyFrame, plan: Plan) -> pl.LazyFrame:
             out, groupby_cols, value_col, date_col, min_size, penalty, min_confidence
         )
         return changepoints_df.lazy()
+
+    elif plan.op == "cluster":
+        # Extract parameters for clustering
+        entity_type = plan.op_args.get("entity_type", "loc")
+        k = plan.op_args.get("k", 6)
+        random_state = plan.op_args.get("random_state", 42)
+
+        # Run clustering analysis and return as lazy frame
+        cluster_results_df = run_cluster_analysis(out, entity_type, k, random_state)
+        return cluster_results_df.lazy()
 
     # Apply aggregation
     if plan.aggregate:

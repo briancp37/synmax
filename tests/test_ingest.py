@@ -70,24 +70,24 @@ class TestLoader:
 
     def test_load_dataset_missing_file_with_auto(self):
         """Test that missing file with auto=True downloads the dataset."""
-        import tempfile
         import os
-        
+        import tempfile
+
         # Use a temporary file path for testing
         with tempfile.TemporaryDirectory() as temp_dir:
             test_path = os.path.join(temp_dir, "test_download.parquet")
-            
+
             # This should download the dataset
             lf = load_dataset(test_path, auto=True)
-            
+
             # Verify the file was created and the LazyFrame is valid
             assert os.path.exists(test_path)
             assert lf is not None
-            
+
             # Verify we can collect a sample to ensure it's a valid parquet
             sample = lf.head(1).collect()
             assert sample.height >= 0  # Should have at least some data
-            
+
             # Clean up
             os.remove(test_path)
 
@@ -96,7 +96,7 @@ class TestLoader:
         # Since we now have data/pipeline_data.parquet, this should work
         lf = load_dataset(None, auto=False)
         assert lf is not None
-        
+
         # Verify we can collect a sample to ensure it's valid
         sample = lf.head(1).collect()
         assert sample.height >= 0

@@ -34,7 +34,7 @@ _PATTERNS = [
     (re.compile(r"average scheduled quantity by state", re.I), "avg_scheduled_by_state"),
     # changepoint detection patterns - comprehensive synonyms
     (re.compile(r"find change points? in (.+?) flows?", re.I), "changepoint_pipeline"),
-    (re.compile(r"detect change points? in (.+?) flows?", re.I), "changepoint_pipeline"),  
+    (re.compile(r"detect change points? in (.+?) flows?", re.I), "changepoint_pipeline"),
     (re.compile(r"when did (.+?) flows? change", re.I), "changepoint_pipeline"),
     (re.compile(r"find change points? for (.+)", re.I), "changepoint_pipeline"),
     (re.compile(r"change points? in (.+)", re.I), "changepoint_pipeline"),
@@ -46,7 +46,7 @@ _PATTERNS = [
     (re.compile(r"regime changes? in (.+)", re.I), "changepoint_pipeline"),
     (re.compile(r"find regime changes?", re.I), "changepoint_all"),
     (re.compile(r"detect regime changes?", re.I), "changepoint_all"),
-    # structural break patterns  
+    # structural break patterns
     (re.compile(r"find structural breaks? in (.+?) flows?", re.I), "changepoint_pipeline"),
     (re.compile(r"detect structural breaks? in (.+?) flows?", re.I), "changepoint_pipeline"),
     (re.compile(r"structural breaks? in (.+)", re.I), "changepoint_pipeline"),
@@ -64,12 +64,23 @@ _PATTERNS = [
     (re.compile(r"find flow shifts? in (.+)", re.I), "changepoint_pipeline"),
     (re.compile(r"detect flow shifts? in (.+)", re.I), "changepoint_pipeline"),
     (re.compile(r"when did (.+?) shift", re.I), "changepoint_pipeline"),
+    # clustering patterns
+    (re.compile(r"cluster locations? by (.+) into (\d+) groups?", re.I), "cluster_locations"),
+    (re.compile(r"cluster locations? by (.+)", re.I), "cluster_locations"),
+    (re.compile(r"group locations? by (.+)", re.I), "cluster_locations"),
+    (re.compile(r"find locations? with similar (.+)", re.I), "cluster_locations"),
+    (re.compile(r"cluster counterparties? by (.+) into (\d+) groups?", re.I), "cluster_counterparties"),
+    (re.compile(r"cluster counterparties? by (.+)", re.I), "cluster_counterparties"),
+    (re.compile(r"group counterparties? by (.+)", re.I), "cluster_counterparties"),
+    (re.compile(r"find counterparties? with similar (.+)", re.I), "cluster_counterparties"),
 ]
 
 # OpenAI/Anthropic function schema for Plan generation
 PLAN_FUNCTION_SCHEMA = {
-    "name": "generate_query_plan", 
-    "description": "Generate a structured query plan for gas pipeline data analysis. For queries about change points, regime changes, structural breaks, pattern shifts, behavior changes, flow shifts, or any discontinuity analysis, use op='changepoint'.",
+    "name": "generate_query_plan",
+    "description": "Generate a structured query plan for gas pipeline data analysis. "
+    "For queries about change points, regime changes, structural breaks, pattern shifts, "
+    "behavior changes, flow shifts, or any discontinuity analysis, use op='changepoint'.",
     "parameters": {
         "type": "object",
         "properties": {
@@ -151,44 +162,51 @@ PLAN_FUNCTION_SCHEMA = {
             "op": {
                 "type": "string",
                 "enum": ["metric_compute", "changepoint", "cluster", "rules_scan", None],
-                "description": "Optional advanced analytics operation. Use 'changepoint' for: change points, regime changes, structural breaks, pattern shifts, behavior changes, flow shifts, or any time series discontinuity analysis.",
+                "description": "Optional advanced analytics operation. Use 'changepoint' for: "
+                "change points, regime changes, structural breaks, pattern shifts, "
+                "behavior changes, flow shifts, or any time series discontinuity analysis.",
             },
             "op_args": {
-                "type": "object", 
+                "type": "object",
                 "description": "Arguments for the analytics operation",
                 "properties": {
-                    "name": {"type": "string", "description": "Metric name for metric_compute operation"},
+                    "name": {
+                        "type": "string",
+                        "description": "Metric name for metric_compute operation",
+                    },
                     "groupby_cols": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Columns to group by for changepoint detection (e.g., ['pipeline_name'])"
+                        "description": "Columns to group by for changepoint detection "
+                        "(e.g., ['pipeline_name'])",
                     },
                     "value_col": {
-                        "type": "string", 
+                        "type": "string",
                         "default": "scheduled_quantity",
-                        "description": "Column to analyze for change points"
+                        "description": "Column to analyze for change points",
                     },
                     "date_col": {
                         "type": "string",
-                        "default": "eff_gas_day", 
-                        "description": "Date column for time series analysis"
+                        "default": "eff_gas_day",
+                        "description": "Date column for time series analysis",
                     },
                     "min_confidence": {
                         "type": "number",
                         "default": 0.7,
-                        "description": "Minimum confidence threshold for change points (0.0-2.0+, default 0.7)"
+                        "description": "Minimum confidence threshold for change points "
+                        "(0.0-2.0+, default 0.7)",
                     },
                     "penalty": {
                         "type": "number",
                         "default": 10.0,
-                        "description": "PELT penalty parameter (higher = fewer change points)"
+                        "description": "PELT penalty parameter (higher = fewer change points)",
                     },
                     "min_size": {
                         "type": "integer",
                         "default": 10,
-                        "description": "Minimum segment size for change point detection"
-                    }
-                }
+                        "description": "Minimum segment size for change point detection",
+                    },
+                },
             },
             "evidence": {
                 "type": "boolean",
@@ -620,8 +638,8 @@ def plan(q: str, deterministic: bool = True) -> Plan:
                     "date_col": "eff_gas_day",
                     "min_confidence": 0.7,
                     "penalty": 10.0,
-                    "min_size": 10
-                }
+                    "min_size": 10,
+                },
             )
 
         elif key == "changepoint_all":
@@ -629,12 +647,48 @@ def plan(q: str, deterministic: bool = True) -> Plan:
                 op="changepoint",
                 op_args={
                     "groupby_cols": ["pipeline_name"],  # Group by pipeline to see all pipelines
-                    "value_col": "scheduled_quantity", 
+                    "value_col": "scheduled_quantity",
                     "date_col": "eff_gas_day",
                     "min_confidence": 0.7,
                     "penalty": 10.0,
-                    "min_size": 10
-                }
+                    "min_size": 10,
+                },
+            )
+
+        elif key == "cluster_locations":
+            # Extract k if specified, default to 6
+            k = 6
+            if len(m.groups()) >= 2 and m.group(2):
+                try:
+                    k = int(m.group(2))
+                except ValueError:
+                    k = 6
+            
+            return Plan(
+                op="cluster",
+                op_args={
+                    "entity_type": "loc",
+                    "k": k,
+                    "random_state": 42,
+                },
+            )
+
+        elif key == "cluster_counterparties":
+            # Extract k if specified, default to 6
+            k = 6
+            if len(m.groups()) >= 2 and m.group(2):
+                try:
+                    k = int(m.group(2))
+                except ValueError:
+                    k = 6
+            
+            return Plan(
+                op="cluster",
+                op_args={
+                    "entity_type": "counterparty",
+                    "k": k,
+                    "random_state": 42,
+                },
             )
 
     # Fallback: return minimal plan if no pattern matches
