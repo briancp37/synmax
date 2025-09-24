@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import polars as pl
 
+from .events import changepoint_detection
 from .metrics import imbalance_pct, ramp_risk, reversal_freq
 from .plan_schema import Plan
 
@@ -28,8 +29,21 @@ def apply_plan(lf: pl.LazyFrame, plan: Plan) -> pl.LazyFrame:
             lo, hi = f.value
             # Handle date strings by converting to date literals
             if f.column == "eff_gas_day":
-                lo_date = pl.lit(lo).str.to_date() if isinstance(lo, str) else pl.lit(lo)
-                hi_date = pl.lit(hi).str.to_date() if isinstance(hi, str) else pl.lit(hi)
+                # Handle different date input types
+                if isinstance(lo, str):
+                    lo_date = pl.lit(lo).str.to_date()
+                elif hasattr(lo, "_pyexpr"):  # Polars expression
+                    lo_date = lo
+                else:
+                    lo_date = pl.lit(lo)
+
+                if isinstance(hi, str):
+                    hi_date = pl.lit(hi).str.to_date()
+                elif hasattr(hi, "_pyexpr"):  # Polars expression
+                    hi_date = hi
+                else:
+                    hi_date = pl.lit(hi)
+
                 out = out.filter((pl.col(f.column) >= lo_date) & (pl.col(f.column) <= hi_date))
             else:
                 out = out.filter((pl.col(f.column) >= lo) & (pl.col(f.column) <= hi))
@@ -57,6 +71,20 @@ def apply_plan(lf: pl.LazyFrame, plan: Plan) -> pl.LazyFrame:
             return imbalance_pct(out)
         else:
             raise ValueError(f"Unknown metric: {metric_name}")
+
+    elif plan.op == "changepoint":
+        # Extract parameters for changepoint detection
+        groupby_cols = plan.op_args.get("groupby_cols")
+        value_col = plan.op_args.get("value_col", "scheduled_quantity")
+        date_col = plan.op_args.get("date_col", "eff_gas_day")
+        min_size = plan.op_args.get("min_size", 10)
+        penalty = plan.op_args.get("penalty", 10.0)
+
+        # Run changepoint detection and return as lazy frame
+        changepoints_df = changepoint_detection(
+            out, groupby_cols, value_col, date_col, min_size, penalty
+        )
+        return changepoints_df.lazy()
 
     # Apply aggregation
     if plan.aggregate:
