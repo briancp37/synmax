@@ -82,6 +82,7 @@ def ask(
     ),
     export: Optional[str] = typer.Option(None, "--export", help="Export results to JSON file"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Show plan JSON without executing"),
+    no_cache: bool = typer.Option(False, "--no-cache", help="Bypass cache and force fresh execution"),
 ) -> None:
     """Ask a natural-language question about the dataset."""
     import json
@@ -115,8 +116,8 @@ def ask(
         else:
             lf = load_dataset("examples/golden.parquet", False)
 
-        # Create cache manager
-        cache_manager = CacheManager()
+        # Create cache manager (or None to bypass cache)
+        cache_manager = None if no_cache else CacheManager()
 
         # Execute the plan
         answer = run(lf, query_plan, cache_manager)
@@ -150,6 +151,16 @@ def ask(
             )
             if sort["limit"]:
                 typer.echo(f"• Limited to: {sort['limit']} rows")
+
+        if answer.evidence["operation"]:
+            op = answer.evidence["operation"]
+            typer.echo(f"• Operation: {op['type']}")
+            if op["parameters"]:
+                typer.echo("• Parameters:")
+                for key, value in op["parameters"].items():
+                    typer.echo(f"  - {key}: {value}")
+                if op['type'] == 'changepoint':
+                    typer.echo("  (Tip: Ask 'with min_confidence=0.5' or 'with penalty=5.0' to adjust parameters)", color="bright_black")
 
         plan_time = answer.evidence["timings_ms"]["plan"]
         collect_time = answer.evidence["timings_ms"]["collect"]
@@ -314,19 +325,146 @@ def events(
         None, "--since", help="Find events since date (YYYY-MM-DD)"
     ),
     top: int = typer.Option(10, "--top", help="Number of top events to show"),
+    min_confidence: float = typer.Option(
+        0.7, "--min-confidence", help="Minimum confidence threshold (0.0-2.0+, default 0.7)"
+    ),
+    export: Optional[str] = typer.Option(None, "--export", help="Export results to JSON file"),
 ) -> None:
     """Detect change-point events in the data."""
-    typer.echo("Detecting change-point events...")
+    try:
+        from pathlib import Path
+        from rich.console import Console
+        from rich.table import Table
+        import polars as pl
+        
+        from data_agent.ingest.loader import load_dataset
+        from data_agent.core.events import changepoint_detection, build_event_card
+        from data_agent.core.plan_schema import Plan, Filter
+        from data_agent.core.ops import apply_plan
+        
+        console = Console()
+        console.print("Detecting change-point events...")
 
-    if pipeline:
-        typer.echo(f"Pipeline: {pipeline}")
-    if since:
-        typer.echo(f"Since: {since}")
-    typer.echo(f"Showing top {top} events")
+        if pipeline:
+            console.print(f"Pipeline: {pipeline}")
+        if since:
+            console.print(f"Since: {since}")
+        console.print(f"Showing top {top} events with confidence >= {min_confidence}")
+        if min_confidence == 0.7:
+            console.print("[dim](Use --min-confidence to adjust threshold, e.g., --min-confidence 0.5)[/dim]")
 
-    # TODO: changepoint.detect_events(pipeline, since, top)
-    logger.info("Events command executed", extra={"pipeline": pipeline, "since": since, "top": top})
-    typer.echo("Change-point events (placeholder)")
+        # Load dataset
+        from data_agent.config import DATA_PATH
+        
+        dataset_path = None
+        if DATA_PATH.exists():
+            dataset_path = str(DATA_PATH)
+        elif Path("examples/golden.parquet").exists():
+            dataset_path = "examples/golden.parquet"
+        else:
+            console.print("[red]Error: No dataset found. Please run 'agent load' first.[/red]")
+            raise typer.Exit(1)
+
+        with console.status("Loading dataset..."):
+            lf = load_dataset(path=dataset_path, auto=False)
+
+        # Build filters based on options
+        filters = []
+        if pipeline:
+            filters.append(Filter(column="pipeline_name", op="=", value=pipeline))
+        if since:
+            # Add date filter for since parameter
+            filters.append(Filter(column="eff_gas_day", op=">=", value=since))
+
+        # Create a plan for changepoint detection
+        plan = Plan(
+            filters=filters,
+            op="changepoint",
+            op_args={
+                "groupby_cols": ["pipeline_name"] if not pipeline else None,
+                "value_col": "scheduled_quantity",
+                "date_col": "eff_gas_day",
+                "min_size": 10,
+                "penalty": 10.0,
+                "min_confidence": min_confidence
+            }
+        )
+
+        with console.status("Analyzing data for change points..."):
+            # Execute the plan
+            result_lf = apply_plan(lf, plan)
+            changepoints_df = result_lf.collect()
+
+        if changepoints_df.is_empty():
+            console.print(f"[yellow]No change points found with confidence >= {min_confidence}[/yellow]")
+            console.print(f"[dim]Try lowering --min-confidence (e.g., --min-confidence 0.5) to see more results[/dim]")
+        else:
+            # Sort by confidence and limit to top N
+            sorted_df = changepoints_df.sort("confidence", descending=True).head(top)
+            num_events = len(changepoints_df)
+            console.print(f"[dim]Found {num_events} high-confidence change points (>= {min_confidence})[/dim]")
+            
+            # Display results in a table
+            table = Table(title="Change Point Events")
+            table.add_column("Date", style="cyan")
+            table.add_column("Before Mean", justify="right", style="green")
+            table.add_column("After Mean", justify="right", style="red")
+            table.add_column("Change %", justify="right", style="yellow")
+            table.add_column("Confidence", justify="right", style="magenta")
+            if "pipeline_name" in sorted_df.columns:
+                table.add_column("Pipeline", style="blue")
+
+            for row in sorted_df.iter_rows(named=True):
+                change_pct = f"{row['change_magnitude']*100:.1f}%"
+                confidence = f"{row['confidence']:.2f}"
+                before_mean = f"{row['before_mean']:.1f}"
+                after_mean = f"{row['after_mean']:.1f}"
+                
+                row_data = [
+                    str(row['changepoint_date']),
+                    before_mean,
+                    after_mean,
+                    change_pct,
+                    confidence
+                ]
+                
+                if "pipeline_name" in row:
+                    row_data.append(row['pipeline_name'])
+                
+                table.add_row(*row_data)
+
+            console.print(table)
+            
+            # Build event card for additional insights
+            event_card = build_event_card(sorted_df, lf)
+            console.print(f"\n[bold]Summary:[/bold] {event_card['summary']}")
+            
+            # Export if requested
+            if export:
+                export_data = {
+                    "changepoints": sorted_df.to_dicts(),
+                    "event_card": event_card
+                }
+                with open(export, 'w') as f:
+                    import json
+                    json.dump(export_data, f, indent=2, default=str)
+                console.print(f"Results exported to {export}")
+
+        logger.info("Events command executed", extra={
+            "pipeline": pipeline, 
+            "since": since, 
+            "top": top,
+            "min_confidence": min_confidence,
+            "events_found": len(changepoints_df) if not changepoints_df.is_empty() else 0
+        })
+
+    except FileNotFoundError as e:
+        console.print("[red]Error: Dataset not found. Please run 'agent load' first.[/red]")
+        raise typer.Exit(1) from e
+    except Exception as e:
+        console.print(f"[red]Error detecting events: {e}[/red]")
+        logger.error("Events command failed", extra={"error": str(e)})
+        raise typer.Exit(1) from e
 
 
 @app.command()
