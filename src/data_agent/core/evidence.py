@@ -74,7 +74,7 @@ def build_evidence(
     }
 
     # Build evidence dictionary with serializable filter values
-    def _serialize_filter_value(value):
+    def _serialize_filter_value(value: Any) -> Any:
         """Convert filter values to serializable format."""
         if hasattr(value, "__class__") and "Expr" in str(value.__class__):
             return str(value)
@@ -93,10 +93,7 @@ def build_evidence(
         "filters": serializable_filters,
         "aggregate": plan.aggregate.model_dump() if plan.aggregate else None,
         "sort": plan.sort.model_dump() if plan.sort else None,
-        "operation": {
-            "type": plan.op,
-            "parameters": plan.op_args
-        } if plan.op else None,
+        "operation": {"type": plan.op, "parameters": plan.op_args} if plan.op else None,
         "rows_out": int(df.height),
         "columns": list(df.columns),
         "missingness": missingness,

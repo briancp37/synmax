@@ -1,8 +1,10 @@
 """CLI interface for the data agent using Typer."""
 
-from typing import Optional
+from pathlib import Path
+from typing import Literal, Optional
 
 import orjson
+import polars as pl
 import typer
 
 from data_agent import config
@@ -78,11 +80,13 @@ def load(
 def ask(
     q: str = typer.Argument(..., help="Natural language question about the dataset"),
     planner: str = typer.Option(
-        "deterministic", "--planner", help="Planner type: deterministic or llm"
+        "llm", "--planner", help="Planner type: deterministic or llm"
     ),
     export: Optional[str] = typer.Option(None, "--export", help="Export results to JSON file"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Show plan JSON without executing"),
-    no_cache: bool = typer.Option(False, "--no-cache", help="Bypass cache and force fresh execution"),
+    no_cache: bool = typer.Option(
+        False, "--no-cache", help="Bypass cache and force fresh execution"
+    ),
 ) -> None:
     """Ask a natural-language question about the dataset."""
     import json
@@ -159,8 +163,11 @@ def ask(
                 typer.echo("• Parameters:")
                 for key, value in op["parameters"].items():
                     typer.echo(f"  - {key}: {value}")
-                if op['type'] == 'changepoint':
-                    typer.echo("  (Tip: Ask 'with min_confidence=0.5' or 'with penalty=5.0' to adjust parameters)", color="bright_black")
+                if op["type"] == "changepoint":
+                    typer.echo(
+                        "  (Tip: Ask 'with min_confidence=0.5' or 'with penalty=5.0' "
+                        "to adjust parameters)",
+                    )
 
         plan_time = answer.evidence["timings_ms"]["plan"]
         collect_time = answer.evidence["timings_ms"]["collect"]
@@ -333,15 +340,15 @@ def events(
     """Detect change-point events in the data."""
     try:
         from pathlib import Path
+
         from rich.console import Console
         from rich.table import Table
-        import polars as pl
-        
-        from data_agent.ingest.loader import load_dataset
-        from data_agent.core.events import changepoint_detection, build_event_card
-        from data_agent.core.plan_schema import Plan, Filter
+
+        from data_agent.core.events import build_event_card
         from data_agent.core.ops import apply_plan
-        
+        from data_agent.core.plan_schema import Filter, Plan
+        from data_agent.ingest.loader import load_dataset
+
         console = Console()
         console.print("Detecting change-point events...")
 
@@ -351,11 +358,13 @@ def events(
             console.print(f"Since: {since}")
         console.print(f"Showing top {top} events with confidence >= {min_confidence}")
         if min_confidence == 0.7:
-            console.print("[dim](Use --min-confidence to adjust threshold, e.g., --min-confidence 0.5)[/dim]")
+            console.print(
+                "[dim](Use --min-confidence to adjust threshold, e.g., --min-confidence 0.5)[/dim]"
+            )
 
         # Load dataset
         from data_agent.config import DATA_PATH
-        
+
         dataset_path = None
         if DATA_PATH.exists():
             dataset_path = str(DATA_PATH)
@@ -374,7 +383,7 @@ def events(
             filters.append(Filter(column="pipeline_name", op="=", value=pipeline))
         if since:
             # Add date filter for since parameter
-            filters.append(Filter(column="eff_gas_day", op=">=", value=since))
+            filters.append(Filter(column="eff_gas_day", op="between", value=[since, "2030-01-01"]))
 
         # Create a plan for changepoint detection
         plan = Plan(
@@ -386,8 +395,8 @@ def events(
                 "date_col": "eff_gas_day",
                 "min_size": 10,
                 "penalty": 10.0,
-                "min_confidence": min_confidence
-            }
+                "min_confidence": min_confidence,
+            },
         )
 
         with console.status("Analyzing data for change points..."):
@@ -396,14 +405,21 @@ def events(
             changepoints_df = result_lf.collect()
 
         if changepoints_df.is_empty():
-            console.print(f"[yellow]No change points found with confidence >= {min_confidence}[/yellow]")
-            console.print(f"[dim]Try lowering --min-confidence (e.g., --min-confidence 0.5) to see more results[/dim]")
+            console.print(
+                f"[yellow]No change points found with confidence >= {min_confidence}[/yellow]"
+            )
+            console.print(
+                "[dim]Try lowering --min-confidence (e.g., --min-confidence 0.5) "
+                "to see more results[/dim]"
+            )
         else:
             # Sort by confidence and limit to top N
             sorted_df = changepoints_df.sort("confidence", descending=True).head(top)
             num_events = len(changepoints_df)
-            console.print(f"[dim]Found {num_events} high-confidence change points (>= {min_confidence})[/dim]")
-            
+            console.print(
+                f"[dim]Found {num_events} high-confidence change points (>= {min_confidence})[/dim]"
+            )
+
             # Display results in a table
             table = Table(title="Change Point Events")
             table.add_column("Date", style="cyan")
@@ -419,44 +435,45 @@ def events(
                 confidence = f"{row['confidence']:.2f}"
                 before_mean = f"{row['before_mean']:.1f}"
                 after_mean = f"{row['after_mean']:.1f}"
-                
+
                 row_data = [
-                    str(row['changepoint_date']),
+                    str(row["changepoint_date"]),
                     before_mean,
                     after_mean,
                     change_pct,
-                    confidence
+                    confidence,
                 ]
-                
+
                 if "pipeline_name" in row:
-                    row_data.append(row['pipeline_name'])
-                
+                    row_data.append(row["pipeline_name"])
+
                 table.add_row(*row_data)
 
             console.print(table)
-            
+
             # Build event card for additional insights
             event_card = build_event_card(sorted_df, lf)
             console.print(f"\n[bold]Summary:[/bold] {event_card['summary']}")
-            
+
             # Export if requested
             if export:
-                export_data = {
-                    "changepoints": sorted_df.to_dicts(),
-                    "event_card": event_card
-                }
-                with open(export, 'w') as f:
+                export_data = {"changepoints": sorted_df.to_dicts(), "event_card": event_card}
+                with open(export, "w") as f:
                     import json
+
                     json.dump(export_data, f, indent=2, default=str)
                 console.print(f"Results exported to {export}")
 
-        logger.info("Events command executed", extra={
-            "pipeline": pipeline, 
-            "since": since, 
-            "top": top,
-            "min_confidence": min_confidence,
-            "events_found": len(changepoints_df) if not changepoints_df.is_empty() else 0
-        })
+        logger.info(
+            "Events command executed",
+            extra={
+                "pipeline": pipeline,
+                "since": since,
+                "top": top,
+                "min_confidence": min_confidence,
+                "events_found": len(changepoints_df) if not changepoints_df.is_empty() else 0,
+            },
+        )
 
     except FileNotFoundError as e:
         console.print("[red]Error: Dataset not found. Please run 'agent load' first.[/red]")
@@ -473,6 +490,7 @@ def cluster(
         ..., "--entity-type", help="Entity type to cluster: loc or counterparty"
     ),
     k: int = typer.Option(6, "--k", help="Number of clusters"),
+    export: Optional[str] = typer.Option(None, "--export", help="Export results to JSON file"),
 ) -> None:
     """Cluster entities by behavior patterns."""
     valid_entity_types = ["loc", "counterparty"]
@@ -482,9 +500,69 @@ def cluster(
 
     typer.echo(f"Clustering {entity_type} entities into {k} clusters...")
 
-    # TODO: clustering.cluster_entities(entity_type, k)
-    logger.info("Cluster command executed", extra={"entity_type": entity_type, "k": k})
-    typer.echo(f"Clustered {entity_type} entities (placeholder)")
+    try:
+        # Load the dataset - use real data if available, otherwise golden dataset
+        from data_agent.config import DATA_PATH
+        from data_agent.core.cluster import cluster_entities
+        from data_agent.ingest.loader import load_dataset
+
+        if DATA_PATH.exists():
+            lf = load_dataset(str(DATA_PATH), False)
+        else:
+            lf = load_dataset("examples/golden.parquet", False)
+
+        # Run clustering
+        # Type assertion to satisfy mypy
+        entity_type_literal: Literal["loc", "counterparty"] = entity_type  # type: ignore[assignment]
+        results_df, metrics = cluster_entities(lf, entity_type_literal, k, random_state=42)
+
+        # Display results
+        typer.echo("\nCluster Results:")
+        typer.echo(
+            results_df.group_by(["cluster_id", "cluster_name"])
+            .agg(
+                [
+                    pl.len().alias("count"),
+                    pl.col("mean_flow").mean().alias("avg_flow"),
+                ]
+            )
+            .sort("cluster_id")
+        )
+
+        # Display metrics
+        typer.echo("\nMetrics:")
+        typer.echo(f"• Silhouette Score: {metrics['silhouette_score']:.3f}")
+        typer.echo(f"• Entities Clustered: {metrics['n_entities']:,}")
+        typer.echo(
+            f"• Cluster Size Range: {metrics['min_cluster_size']}-{metrics['max_cluster_size']}"
+        )
+
+        # Export if requested
+        if export:
+            export_data = {
+                "results": results_df.to_dicts(),
+                "metrics": metrics,
+                "parameters": {"entity_type": entity_type, "k": k},
+            }
+            Path(export).write_text(orjson.dumps(export_data, option=orjson.OPT_INDENT_2).decode())
+            typer.echo(f"Results exported to {export}")
+
+        logger.info(
+            "Cluster command executed",
+            extra={
+                "entity_type": entity_type,
+                "k": k,
+                "silhouette_score": metrics["silhouette_score"],
+                "n_entities": metrics["n_entities"],
+            },
+        )
+
+    except Exception as e:
+        typer.echo(f"Error during clustering: {e}")
+        logger.error(
+            "Clustering failed", extra={"error": str(e), "entity_type": entity_type, "k": k}
+        )
+        raise typer.Exit(1) from e
 
 
 @app.command()

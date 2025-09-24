@@ -37,7 +37,7 @@ def changepoint_detection(
         group_cols = list(groupby_cols)
         if date_col not in group_cols:
             group_cols.append(date_col)
-        
+
         df = (
             lf.group_by(group_cols)
             .agg(pl.col(value_col).sum().alias("total_value"))
@@ -119,7 +119,7 @@ def changepoint_detection(
     df = pl.DataFrame(events)
     if not df.is_empty() and min_confidence > 0:
         df = df.filter(pl.col("confidence") >= min_confidence)
-    
+
     return df
 
 

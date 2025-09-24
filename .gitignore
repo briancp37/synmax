@@ -111,3 +111,4 @@ reports/
 # Output files
 output.json
 *.output.json
+src/data_agent/core/planner.py.backup
