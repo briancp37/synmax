@@ -21,6 +21,12 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 DATA_AGENT_MODEL = os.getenv("DATA_AGENT_MODEL", "gpt-5")
 DATA_AGENT_CACHE_TTL_HOURS = int(os.getenv("DATA_AGENT_CACHE_TTL_HOURS", "24"))
 
+# Cache and materialization settings
+CACHE_MAX_GB = float(os.getenv("CACHE_MAX_GB", "10.0"))  # Max cache size in GB
+CACHE_TTL_HOURS = int(os.getenv("CACHE_TTL_HOURS", "24"))  # Cache TTL in hours
+ROW_CKPT = int(os.getenv("ROW_CKPT", "100000"))  # Row threshold for checkpointing
+BYTE_CKPT = int(os.getenv("BYTE_CKPT", "100000000"))  # Byte threshold for checkpointing (100MB)
+
 # Default dataset path
 DATA_PATH = DATA_DIR / "pipeline_data.parquet"
 

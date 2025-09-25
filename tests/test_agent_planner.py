@@ -21,11 +21,21 @@ class TestAgentPlanner:
     def setup_method(self):
         """Set up test fixtures."""
         self.available_columns = [
-            "pipeline_name", "loc_name", "connecting_pipeline", "connecting_entity",
-            "rec_del_sign", "category_short", "country_name", "state_abb", "county_name",
-            "latitude", "longitude", "eff_gas_day", "scheduled_quantity"
+            "pipeline_name",
+            "loc_name",
+            "connecting_pipeline",
+            "connecting_entity",
+            "rec_del_sign",
+            "category_short",
+            "country_name",
+            "state_abb",
+            "county_name",
+            "latitude",
+            "longitude",
+            "eff_gas_day",
+            "scheduled_quantity",
         ]
-        
+
         # Create a mock LLM client
         self.mock_client = Mock(spec=LLMClient)
         self.planner = AgentPlanner(self.mock_client)
@@ -48,16 +58,16 @@ class TestAgentPlanner:
     def test_build_function_schema(self):
         """Test function schema building for LLM."""
         schema = self.planner._build_function_schema(self.available_columns)
-        
+
         assert schema["name"] == "create_dag_plan"
         assert "description" in schema
         assert "parameters" in schema
-        
+
         params = schema["parameters"]
         assert params["type"] == "object"
         assert "nodes" in params["properties"]
         assert "edges" in params["properties"]
-        
+
         # Check node schema
         node_schema = params["properties"]["nodes"]
         assert node_schema["type"] == "array"
@@ -69,7 +79,7 @@ class TestAgentPlanner:
     def test_build_system_prompt(self):
         """Test system prompt building."""
         prompt = self.planner._build_system_prompt(self.available_columns)
-        
+
         assert "expert data processing planner" in prompt.lower()
         assert "pipeline_name" in prompt
         assert "scheduled_quantity" in prompt
@@ -82,36 +92,50 @@ class TestAgentPlanner:
         # Mock LLM response
         mock_response = {
             "tool_calls": [
-                Mock(function=Mock(
-                    name="create_dag_plan",
-                    arguments=json.dumps({
-                        "nodes": [
-                            {"id": "f", "op": "filter", "params": {"column": "eff_gas_day", "op": "between", "value": ["2021-01-01", "2021-12-31"]}},
-                            {"id": "l", "op": "limit", "params": {"n": 100}},
-                            {"id": "e", "op": "evidence_collect", "params": {}}
-                        ],
-                        "edges": [
-                            {"src": "raw", "dst": "f"},
-                            {"src": "f", "dst": "l"},
-                            {"src": "l", "dst": "e"}
-                        ],
-                        "inputs": ["raw"],
-                        "outputs": ["l"]
-                    })
-                ))
+                Mock(
+                    function=Mock(
+                        name="create_dag_plan",
+                        arguments=json.dumps(
+                            {
+                                "nodes": [
+                                    {
+                                        "id": "f",
+                                        "op": "filter",
+                                        "params": {
+                                            "column": "eff_gas_day",
+                                            "op": "between",
+                                            "value": ["2021-01-01", "2021-12-31"],
+                                        },
+                                    },
+                                    {"id": "l", "op": "limit", "params": {"n": 100}},
+                                    {"id": "e", "op": "evidence_collect", "params": {}},
+                                ],
+                                "edges": [
+                                    {"src": "raw", "dst": "f"},
+                                    {"src": "f", "dst": "l"},
+                                    {"src": "l", "dst": "e"},
+                                ],
+                                "inputs": ["raw"],
+                                "outputs": ["l"],
+                            }
+                        ),
+                    )
+                )
             ]
         }
         self.mock_client.call.return_value = mock_response
-        
-        plan = self.planner.plan("Filter data for 2021 and limit to 100 rows", self.available_columns)
-        
+
+        plan = self.planner.plan(
+            "Filter data for 2021 and limit to 100 rows", self.available_columns
+        )
+
         assert isinstance(plan, PlanGraph)
         # The repair logic may have removed the invalid filter step and added evidence_collect
         assert len(plan.nodes) >= 2  # At least limit and evidence_collect
         assert len(plan.edges) >= 2
         assert plan.inputs == ["raw"]
         assert plan.outputs == ["l"]
-        
+
         # Verify LLM was called with correct parameters
         self.mock_client.call.assert_called_once()
         call_args = self.mock_client.call.call_args
@@ -123,9 +147,9 @@ class TestAgentPlanner:
         """Test LLM planning failure falling back to deterministic plan."""
         # Mock LLM failure
         self.mock_client.call.side_effect = Exception("LLM API error")
-        
+
         plan = self.planner.plan("sum of scheduled quantity", self.available_columns, fallback=True)
-        
+
         assert isinstance(plan, PlanGraph)
         assert len(plan.nodes) > 0
         # Should have aggregation step from fallback
@@ -135,38 +159,32 @@ class TestAgentPlanner:
         """Test LLM planning failure without fallback raises error."""
         # Mock LLM failure
         self.mock_client.call.side_effect = Exception("LLM API error")
-        
+
         with pytest.raises(PlanValidationError, match="LLM planning failed"):
             self.planner.plan("test query", self.available_columns, fallback=False)
 
     def test_invalid_llm_response_no_tool_calls(self):
         """Test handling of LLM response without tool calls."""
         self.mock_client.call.return_value = {"content": "No tool calls"}
-        
+
         with pytest.raises(PlanValidationError):
             self.planner.plan("test query", self.available_columns, fallback=False)
 
     def test_invalid_llm_response_wrong_function(self):
         """Test handling of LLM response with wrong function name."""
-        mock_response = {
-            "tool_calls": [
-                Mock(function=Mock(name="wrong_function", arguments="{}"))
-            ]
-        }
+        mock_response = {"tool_calls": [Mock(function=Mock(name="wrong_function", arguments="{}"))]}
         self.mock_client.call.return_value = mock_response
-        
+
         with pytest.raises(PlanValidationError):
             self.planner.plan("test query", self.available_columns, fallback=False)
 
     def test_invalid_llm_response_malformed_json(self):
         """Test handling of LLM response with malformed JSON."""
         mock_response = {
-            "tool_calls": [
-                Mock(function=Mock(name="create_dag_plan", arguments="invalid json"))
-            ]
+            "tool_calls": [Mock(function=Mock(name="create_dag_plan", arguments="invalid json"))]
         }
         self.mock_client.call.return_value = mock_response
-        
+
         with pytest.raises(PlanValidationError):
             self.planner.plan("test query", self.available_columns, fallback=False)
 
@@ -182,7 +200,7 @@ class TestFallbackPlans:
     def test_simple_aggregation_fallback(self):
         """Test fallback for simple aggregation queries."""
         plan = self.planner._fallback_plan("sum of scheduled quantity", self.available_columns)
-        
+
         assert isinstance(plan, PlanGraph)
         assert any(step.op == StepType.AGGREGATE for step in plan.nodes)
         assert any(step.op == StepType.EVIDENCE_COLLECT for step in plan.nodes)
@@ -190,7 +208,7 @@ class TestFallbackPlans:
     def test_time_series_fallback(self):
         """Test fallback for time series queries."""
         plan = self.planner._fallback_plan("detect regime shifts", self.available_columns)
-        
+
         assert isinstance(plan, PlanGraph)
         assert any(step.op == StepType.STL_DESEASONALIZE for step in plan.nodes)
         assert any(step.op == StepType.CHANGEPOINT for step in plan.nodes)
@@ -198,11 +216,11 @@ class TestFallbackPlans:
     def test_top_k_fallback(self):
         """Test fallback for top-k queries."""
         plan = self.planner._fallback_plan("top 5 pipelines", self.available_columns)
-        
+
         assert isinstance(plan, PlanGraph)
         assert any(step.op == StepType.RANK for step in plan.nodes)
         assert any(step.op == StepType.LIMIT for step in plan.nodes)
-        
+
         # Check that limit is set to 5
         limit_steps = [s for s in plan.nodes if s.op == StepType.LIMIT]
         assert len(limit_steps) == 1
@@ -210,8 +228,10 @@ class TestFallbackPlans:
 
     def test_top_k_fallback_with_number_extraction(self):
         """Test fallback for top-k queries with number extraction."""
-        plan = self.planner._fallback_plan("show me the top 15 highest values", self.available_columns)
-        
+        plan = self.planner._fallback_plan(
+            "show me the top 15 highest values", self.available_columns
+        )
+
         limit_steps = [s for s in plan.nodes if s.op == StepType.LIMIT]
         assert len(limit_steps) == 1
         assert limit_steps[0].params["n"] == 15
@@ -219,7 +239,7 @@ class TestFallbackPlans:
     def test_default_fallback(self):
         """Test default fallback for unrecognized queries."""
         plan = self.planner._fallback_plan("unknown query pattern", self.available_columns)
-        
+
         assert isinstance(plan, PlanGraph)
         assert any(step.op == StepType.LIMIT for step in plan.nodes)
         assert any(step.op == StepType.EVIDENCE_COLLECT for step in plan.nodes)
@@ -238,16 +258,20 @@ class TestPlanRepair:
         # Create a plan with nodes but no edges
         plan = PlanGraph(
             nodes=[
-                Step(id="f", op=StepType.FILTER, params={"column": "pipeline_name", "op": "=", "value": "test"}),
-                Step(id="l", op=StepType.LIMIT, params={"n": 100})
+                Step(
+                    id="f",
+                    op=StepType.FILTER,
+                    params={"column": "pipeline_name", "op": "=", "value": "test"},
+                ),
+                Step(id="l", op=StepType.LIMIT, params={"n": 100}),
             ],
             edges=[],
             inputs=["raw"],
-            outputs=["l"]
+            outputs=["l"],
         )
-        
+
         repaired = self.planner._repair_plan(plan, self.available_columns)
-        
+
         # Should have added connection from raw to first node
         assert len(repaired.edges) > 0
         assert any(edge.src == "raw" for edge in repaired.edges)
@@ -256,15 +280,19 @@ class TestPlanRepair:
         """Test repair of plans missing evidence collection."""
         plan = PlanGraph(
             nodes=[
-                Step(id="f", op=StepType.FILTER, params={"column": "pipeline_name", "op": "=", "value": "test"})
+                Step(
+                    id="f",
+                    op=StepType.FILTER,
+                    params={"column": "pipeline_name", "op": "=", "value": "test"},
+                )
             ],
             edges=[Edge(src="raw", dst="f")],
             inputs=["raw"],
-            outputs=["f"]
+            outputs=["f"],
         )
-        
+
         repaired = self.planner._repair_plan(plan, self.available_columns)
-        
+
         # Should have added evidence collect step
         evidence_steps = [s for s in repaired.nodes if s.op == StepType.EVIDENCE_COLLECT]
         assert len(evidence_steps) == 1
@@ -273,16 +301,23 @@ class TestPlanRepair:
         """Test repair adding limit for plans with aggregation but no limit."""
         plan = PlanGraph(
             nodes=[
-                Step(id="a", op=StepType.AGGREGATE, params={"groupby": ["pipeline_name"], "metrics": [{"col": "scheduled_quantity", "fn": "sum"}]}),
-                Step(id="e", op=StepType.EVIDENCE_COLLECT, params={})
+                Step(
+                    id="a",
+                    op=StepType.AGGREGATE,
+                    params={
+                        "groupby": ["pipeline_name"],
+                        "metrics": [{"col": "scheduled_quantity", "fn": "sum"}],
+                    },
+                ),
+                Step(id="e", op=StepType.EVIDENCE_COLLECT, params={}),
             ],
             edges=[Edge(src="raw", dst="a"), Edge(src="a", dst="e")],
             inputs=["raw"],
-            outputs=["a"]
+            outputs=["a"],
         )
-        
+
         repaired = self.planner._repair_plan(plan, self.available_columns)
-        
+
         # Should have added a limit step
         limit_steps = [s for s in repaired.nodes if s.op == StepType.LIMIT]
         assert len(limit_steps) == 1
@@ -291,16 +326,20 @@ class TestPlanRepair:
         """Test repair of invalid column references."""
         plan = PlanGraph(
             nodes=[
-                Step(id="f", op=StepType.FILTER, params={"column": "nonexistent_column", "op": "=", "value": "test"}),
-                Step(id="e", op=StepType.EVIDENCE_COLLECT, params={})
+                Step(
+                    id="f",
+                    op=StepType.FILTER,
+                    params={"column": "nonexistent_column", "op": "=", "value": "test"},
+                ),
+                Step(id="e", op=StepType.EVIDENCE_COLLECT, params={}),
             ],
             edges=[Edge(src="raw", dst="f"), Edge(src="f", dst="e")],
             inputs=["raw"],
-            outputs=["f"]
+            outputs=["f"],
         )
-        
+
         repaired = self.planner._repair_plan(plan, self.available_columns)
-        
+
         # Should have attempted to fix the column reference
         filter_step = next(s for s in repaired.nodes if s.op == StepType.FILTER)
         # Since no similar column exists, it should remain unchanged but logged
@@ -310,16 +349,20 @@ class TestPlanRepair:
         """Test repair with similar column replacement."""
         plan = PlanGraph(
             nodes=[
-                Step(id="f", op=StepType.FILTER, params={"column": "pipeline", "op": "=", "value": "test"}),
-                Step(id="e", op=StepType.EVIDENCE_COLLECT, params={})
+                Step(
+                    id="f",
+                    op=StepType.FILTER,
+                    params={"column": "pipeline", "op": "=", "value": "test"},
+                ),
+                Step(id="e", op=StepType.EVIDENCE_COLLECT, params={}),
             ],
             edges=[Edge(src="raw", dst="f"), Edge(src="f", dst="e")],
             inputs=["raw"],
-            outputs=["f"]
+            outputs=["f"],
         )
-        
+
         repaired = self.planner._repair_plan(plan, self.available_columns)
-        
+
         # Should have replaced "pipeline" with "pipeline_name"
         filter_step = next(s for s in repaired.nodes if s.op == StepType.FILTER)
         assert filter_step.params["column"] == "pipeline_name"
@@ -330,9 +373,9 @@ class TestPlanRepair:
             nodes=[Step(id="f", op=StepType.LIMIT, params={"n": 100})],
             edges=[Edge(src="raw", dst="f")],
             inputs=["raw"],
-            outputs=["f"]
+            outputs=["f"],
         )
-        
+
         assert self.planner._has_valid_path(plan) is True
 
     def test_has_valid_path_false(self):
@@ -340,13 +383,13 @@ class TestPlanRepair:
         plan = PlanGraph(
             nodes=[
                 Step(id="f", op=StepType.LIMIT, params={"n": 50}),
-                Step(id="l", op=StepType.LIMIT, params={"n": 100})
+                Step(id="l", op=StepType.LIMIT, params={"n": 100}),
             ],
             edges=[Edge(src="raw", dst="f")],  # l is not connected
             inputs=["raw"],
-            outputs=["l"]  # l is not reachable from raw
+            outputs=["l"],  # l is not reachable from raw
         )
-        
+
         assert self.planner._has_valid_path(plan) is False
 
     def test_find_similar_column_exact_match(self):
@@ -372,16 +415,23 @@ class TestEstimatePlanComplexity:
         """Test complexity estimation for simple plan."""
         plan = PlanGraph(
             nodes=[
-                Step(id="a", op=StepType.AGGREGATE, params={"groupby": ["pipeline_name"], "metrics": [{"col": "scheduled_quantity", "fn": "sum"}]}),
-                Step(id="l", op=StepType.LIMIT, params={"n": 100})
+                Step(
+                    id="a",
+                    op=StepType.AGGREGATE,
+                    params={
+                        "groupby": ["pipeline_name"],
+                        "metrics": [{"col": "scheduled_quantity", "fn": "sum"}],
+                    },
+                ),
+                Step(id="l", op=StepType.LIMIT, params={"n": 100}),
             ],
             edges=[Edge(src="raw", dst="a"), Edge(src="a", dst="l")],
             inputs=["raw"],
-            outputs=["l"]
+            outputs=["l"],
         )
-        
+
         estimates = estimate_plan_complexity(plan)
-        
+
         assert estimates["steps"] == 2
         assert estimates["edges"] == 2
         assert estimates["estimated_time_seconds"] > 0
@@ -394,15 +444,15 @@ class TestEstimatePlanComplexity:
         plan = PlanGraph(
             nodes=[
                 Step(id="s", op=StepType.STL_DESEASONALIZE, params={"column": "value"}),
-                Step(id="c", op=StepType.CHANGEPOINT, params={"column": "value", "method": "pelt"})
+                Step(id="c", op=StepType.CHANGEPOINT, params={"column": "value", "method": "pelt"}),
             ],
             edges=[Edge(src="raw", dst="s"), Edge(src="s", dst="c")],
             inputs=["raw"],
-            outputs=["c"]
+            outputs=["c"],
         )
-        
+
         estimates = estimate_plan_complexity(plan)
-        
+
         # Expensive operations should have higher estimates
         assert estimates["estimated_time_seconds"] >= 10  # 5 + 5 from STL and changepoint
         assert estimates["estimated_memory_mb"] >= 200  # 100 + 100
@@ -420,9 +470,9 @@ class TestPlanFromLLMFunction:
         mock_plan = Mock(spec=PlanGraph)
         mock_planner_class.return_value = mock_planner
         mock_planner.plan.return_value = mock_plan
-        
+
         result = plan_from_llm("test query", mock_client)
-        
+
         assert result == mock_plan
         mock_planner_class.assert_called_once_with(mock_client)
         mock_planner.plan.assert_called_once()
@@ -434,9 +484,9 @@ class TestPlanFromLLMFunction:
         mock_plan = Mock(spec=PlanGraph)
         mock_planner_class.return_value = mock_planner
         mock_planner.plan.return_value = mock_plan
-        
+
         result = plan_from_llm("test query")
-        
+
         assert result == mock_plan
         mock_planner_class.assert_called_once_with(None)
 
@@ -447,9 +497,19 @@ class TestIntegrationScenarios:
     def setup_method(self):
         """Set up test fixtures."""
         self.available_columns = [
-            "pipeline_name", "loc_name", "connecting_pipeline", "connecting_entity",
-            "rec_del_sign", "category_short", "country_name", "state_abb", "county_name",
-            "latitude", "longitude", "eff_gas_day", "scheduled_quantity"
+            "pipeline_name",
+            "loc_name",
+            "connecting_pipeline",
+            "connecting_entity",
+            "rec_del_sign",
+            "category_short",
+            "country_name",
+            "state_abb",
+            "county_name",
+            "latitude",
+            "longitude",
+            "eff_gas_day",
+            "scheduled_quantity",
         ]
 
     def test_successful_planning_with_repair(self):
@@ -458,41 +518,57 @@ class TestIntegrationScenarios:
         mock_client = Mock(spec=LLMClient)
         mock_response = {
             "tool_calls": [
-                Mock(function=Mock(
-                    name="create_dag_plan",
-                    arguments=json.dumps({
-                        "nodes": [
-                            {"id": "f", "op": "filter", "params": {"column": "pipeline", "op": "=", "value": "test"}},  # Invalid column
-                            {"id": "a", "op": "aggregate", "params": {"groupby": ["pipeline_name"], "metrics": [{"col": "scheduled_quantity", "fn": "sum"}]}}
-                            # Missing evidence_collect and limit
-                        ],
-                        "edges": [
-                            {"src": "raw", "dst": "f"},
-                            {"src": "f", "dst": "a"}
-                        ],
-                        "inputs": ["raw"],
-                        "outputs": ["a"]
-                    })
-                ))
+                Mock(
+                    function=Mock(
+                        name="create_dag_plan",
+                        arguments=json.dumps(
+                            {
+                                "nodes": [
+                                    {
+                                        "id": "f",
+                                        "op": "filter",
+                                        "params": {
+                                            "column": "pipeline",
+                                            "op": "=",
+                                            "value": "test",
+                                        },
+                                    },  # Invalid column
+                                    {
+                                        "id": "a",
+                                        "op": "aggregate",
+                                        "params": {
+                                            "groupby": ["pipeline_name"],
+                                            "metrics": [{"col": "scheduled_quantity", "fn": "sum"}],
+                                        },
+                                    },
+                                    # Missing evidence_collect and limit
+                                ],
+                                "edges": [{"src": "raw", "dst": "f"}, {"src": "f", "dst": "a"}],
+                                "inputs": ["raw"],
+                                "outputs": ["a"],
+                            }
+                        ),
+                    )
+                )
             ]
         }
         mock_client.call.return_value = mock_response
-        
+
         planner = AgentPlanner(mock_client)
         plan = planner.plan("sum scheduled quantity by pipeline", self.available_columns)
-        
+
         # Verify the plan was repaired
         assert isinstance(plan, PlanGraph)
-        
+
         # Should have fixed the column name
         filter_steps = [s for s in plan.nodes if s.op == StepType.FILTER]
         if filter_steps:
             assert filter_steps[0].params["column"] == "pipeline_name"
-        
+
         # Should have added evidence collect
         evidence_steps = [s for s in plan.nodes if s.op == StepType.EVIDENCE_COLLECT]
         assert len(evidence_steps) >= 1
-        
+
         # Should have added limit for aggregation
         limit_steps = [s for s in plan.nodes if s.op == StepType.LIMIT]
         assert len(limit_steps) >= 1
@@ -502,19 +578,21 @@ class TestIntegrationScenarios:
         # Mock LLM that always fails
         mock_client = Mock(spec=LLMClient)
         mock_client.call.side_effect = Exception("API error")
-        
+
         planner = AgentPlanner(mock_client)
-        plan = planner.plan("top 10 pipelines by scheduled quantity", self.available_columns, fallback=True)
-        
+        plan = planner.plan(
+            "top 10 pipelines by scheduled quantity", self.available_columns, fallback=True
+        )
+
         # Should get a valid plan from fallback
         assert isinstance(plan, PlanGraph)
         assert len(plan.nodes) > 0
-        
+
         # Should be a top-k plan
         rank_steps = [s for s in plan.nodes if s.op == StepType.RANK]
         limit_steps = [s for s in plan.nodes if s.op == StepType.LIMIT]
         assert len(rank_steps) >= 1 or len(limit_steps) >= 1
-        
+
         if limit_steps:
             assert limit_steps[0].params["n"] == 10
 
@@ -523,9 +601,9 @@ class TestIntegrationScenarios:
         # Mock LLM that fails
         mock_client = Mock(spec=LLMClient)
         mock_client.call.side_effect = Exception("API error")
-        
+
         planner = AgentPlanner(mock_client)
-        
+
         # This should still work because fallback creates valid plans
         # But let's test the no-fallback scenario
         with pytest.raises(PlanValidationError):

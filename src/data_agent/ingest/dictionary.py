@@ -70,5 +70,5 @@ def load_data_dictionary(path: Path = ARTIFACTS / "data_dictionary.json") -> dic
         raise FileNotFoundError(
             f"Data dictionary not found at {path}. Run 'agent load' first to generate it."
         )
-    
+
     return orjson.loads(path.read_bytes())
