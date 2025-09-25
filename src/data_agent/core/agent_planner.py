@@ -111,7 +111,7 @@ class AgentPlanner:
     def _build_function_schema(self, available_columns: list[str]) -> dict[str, Any]:
         """Build the function schema for LLM function calling."""
         # Get the base schema from PlanGraph
-        base_schema = PlanGraph.model_json_schema()
+        # base_schema = PlanGraph.model_json_schema()  # TODO: Use for enhanced schema
 
         # Enhance with available columns information
         function_schema = {
@@ -128,7 +128,8 @@ class AgentPlanner:
                             "properties": {
                                 "id": {
                                     "type": "string",
-                                    "description": "Unique identifier for this step (use short names like 'f', 'a', 's')",
+                                    "description": "Unique identifier for this step "
+                                    "(use short names like 'f', 'a', 's')",
                                 },
                                 "op": {
                                     "type": "string",
@@ -229,7 +230,8 @@ class AgentPlanner:
             "outputs": ["l"],
         }
 
-        return f"""You are an expert data processing planner. Convert natural language queries into structured DAG plans for gas pipeline data analysis.
+        return f"""You are an expert data processing planner. 
+Convert natural language queries into structured DAG plans for gas pipeline data analysis.
 
 Available columns: {columns_str}
 
@@ -242,9 +244,11 @@ Key data semantics:
 - category_short: Entity category (e.g., Interconnect, LDC, Industrial)
 
 Available operations:
-- filter: Apply conditions (column, op, value). Ops: =, !=, in, between, is_not_null, contains, >, <, >=, <=
+- filter: Apply conditions (column, op, value). 
+  Ops: =, !=, in, between, is_not_null, contains, >, <, >=, <=
 - resample: Resample time series (freq, on, agg)
-- aggregate: Group and summarize (groupby, metrics). Metrics fn: sum, count, avg, p95, p50, min, max, std
+- aggregate: Group and summarize (groupby, metrics). 
+  Metrics fn: sum, count, avg, p95, p50, min, max, std
 - stl_deseasonalize: Remove seasonal patterns (column, period, seasonal, trend)
 - changepoint: Detect regime changes (column, method, min_size, jump)
 - rank: Rank results (by, method, descending)
