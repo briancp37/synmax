@@ -38,7 +38,12 @@ class LLMClient:
         else:
             raise ValueError(f"Unsupported model: {self.model}")
 
-    def call(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None, **kwargs: Any) -> dict[str, Any]:
+    def call(
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
         """Make a call to the LLM provider.
 
         Args:
@@ -61,7 +66,10 @@ class LLMClient:
             raise ValueError(f"Unsupported provider: {self.provider}")
 
     def _call_openai(
-        self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None, **kwargs: Any
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        **kwargs: Any,
     ) -> dict[str, Any]:
         """Make a call to OpenAI API."""
         try:
@@ -89,7 +97,10 @@ class LLMClient:
             raise Exception(f"OpenAI API call failed: {e}") from e
 
     def _call_anthropic(
-        self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None, **kwargs: Any
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        **kwargs: Any,
     ) -> dict[str, Any]:
         """Make a call to Anthropic API."""
         try:
