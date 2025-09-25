@@ -80,6 +80,9 @@ def load(
 def ask(
     q: str = typer.Argument(..., help="Natural language question about the dataset"),
     planner: str = typer.Option("llm", "--planner", help="Planner type: deterministic or llm"),
+    model: Optional[str] = typer.Option(
+        None, "--model", help="LLM model to use: gpt-4.1, gpt-5, claude-sonnet, claude-opus"
+    ),
     export: Optional[str] = typer.Option(
         None,
         "--export",
@@ -100,10 +103,12 @@ def ask(
 
     typer.echo(f"Question: {q}")
     typer.echo(f"Using planner: {planner}")
+    if model:
+        typer.echo(f"Using model: {model}")
 
     try:
         # Create the plan
-        query_plan = create_plan(q, deterministic=(planner == "deterministic"))
+        query_plan = create_plan(q, deterministic=(planner == "deterministic"), model=model)
 
         if dry_run:
             # Show plan JSON and exit
