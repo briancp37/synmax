@@ -52,3 +52,23 @@ def write_dictionary(dic: dict[str, Any], path: Path = ARTIFACTS / "data_diction
         path: Output path for JSON file.
     """
     path.write_bytes(orjson.dumps(dic, option=orjson.OPT_INDENT_2))
+
+
+def load_data_dictionary(path: Path = ARTIFACTS / "data_dictionary.json") -> dict[str, Any]:
+    """Load data dictionary from JSON file.
+
+    Args:
+        path: Path to JSON file.
+
+    Returns:
+        Dictionary with schema, null rates, and row count information.
+
+    Raises:
+        FileNotFoundError: If dictionary file doesn't exist.
+    """
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Data dictionary not found at {path}. Run 'agent load' first to generate it."
+        )
+    
+    return orjson.loads(path.read_bytes())
