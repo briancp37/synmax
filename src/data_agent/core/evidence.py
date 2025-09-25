@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +11,19 @@ import polars as pl
 
 from ..rules.engine import run_rules
 from .plan_schema import Plan
+
+
+@dataclass
+class StepEvidence:
+    """Evidence for a single step execution."""
+
+    node_id: str
+    params: dict[str, Any]
+    input_stats: dict[str, Any]  # rows, bytes, columns from input handles
+    output_stats: dict[str, Any]  # rows, bytes, columns from output
+    timings: dict[str, float]  # execution timings in seconds
+    snippet: str  # reproducible code snippet
+    checkpoint_path: str | None = None  # path to checkpoint file if materialized
 
 
 def _digest(parquet_path: Path) -> str:

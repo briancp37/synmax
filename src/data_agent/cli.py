@@ -1,5 +1,6 @@
 """CLI interface for the data agent using Typer."""
 
+import time
 from pathlib import Path
 from typing import Literal, Optional
 
@@ -108,6 +109,15 @@ def ask(
     # Ensure directories exist
     config.ensure_directories()
 
+    # Load the dataset - use real data if available, otherwise golden dataset
+    from data_agent.config import DATA_PATH
+    from data_agent.ingest.loader import load_dataset
+
+    if DATA_PATH.exists():
+        lf = load_dataset(str(DATA_PATH), False)
+    else:
+        lf = load_dataset("examples/golden.parquet", False)
+
     try:
         if planner == "agent":
             # New agent planner mode (DAG-based)
@@ -153,20 +163,53 @@ def ask(
                 )
                 return
 
-            # TODO: Execute the plan using agent_executor when implemented
-            typer.echo(f"\nPlan hash: {plan_graph.plan_hash()}")
-            typer.echo(f"Steps: {len(plan_graph.nodes)}")
-            typer.echo(
-                "\nNote: Agent mode execution will be implemented in Task 4 (Agent Executor)"
+            # Execute the plan using agent_executor
+            from data_agent.core.agent_executor import execute as agent_execute
+            from data_agent.core.handles import StepHandle, StepStats
+
+            # Create handle for the raw dataset
+            dataset_path = config.DATA_PATH
+            if not dataset_path.exists():
+                typer.echo("Error: Dataset not found. Please run 'agent load' first.", err=True)
+                raise typer.Exit(1) from None
+
+            # Create dataset handle
+            stats = StepStats(
+                rows=lf.select(pl.len()).collect().item(),
+                bytes=dataset_path.stat().st_size,
+                columns=len(lf.columns),
+                null_count={},
+                computed_at=time.time(),
             )
-            typer.echo("For now, use --planner=deterministic or --planner=llm for execution.")
+
+            dataset_handle = StepHandle(
+                id="raw",
+                store="parquet",
+                path=dataset_path,
+                engine="polars",
+                schema={col: str(dtype) for col, dtype in zip(lf.columns, lf.dtypes)},
+                stats=stats,
+                fingerprint="dataset",
+            )
+
+            # Execute the plan
+            result_df, evidence = agent_execute(plan_graph, dataset_handle)
+
+            typer.echo(f"\nPlan hash: {plan_graph.plan_hash()}")
+            typer.echo(f"Steps executed: {len(evidence['steps'])}")
+            typer.echo(f"Final result: {result_df.height} rows, {result_df.width} columns")
+
+            # Show result table
+            if result_df.height > 0:
+                typer.echo("\nResult:")
+                typer.echo(str(result_df))
+            else:
+                typer.echo("\nResult: Empty table")
 
             # Export if requested
             if export:
                 export_path = export
                 if export == "auto":
-                    import time
-
                     timestamp = int(time.time())
                     export_path = f"artifacts/outputs/{timestamp}_{plan_graph.plan_hash()[:8]}.json"
 
@@ -176,11 +219,16 @@ def ask(
                     "model": model,
                     "plan": plan_graph.model_dump(),
                     "plan_hash": plan_graph.plan_hash(),
-                    "note": "Execution pending - Task 4 implementation",
+                    "result": {
+                        "rows": result_df.height,
+                        "columns": result_df.width,
+                        "data": result_df.to_dicts() if result_df.height <= 100 else "truncated",
+                    },
+                    "evidence": evidence,
                 }
 
                 with open(export_path, "w") as f:
-                    json.dump(export_data, f, indent=2)
+                    json.dump(export_data, f, indent=2, default=str)
                 typer.echo(f"\nPlan exported to: {export_path}")
 
             logger.info(
@@ -217,13 +265,7 @@ def ask(
                 logger.info("Dry run executed", extra={"question": q, "planner": planner})
                 return
 
-            # Load the dataset - use real data if available, otherwise golden dataset
-            from data_agent.config import DATA_PATH
-
-            if DATA_PATH.exists():
-                lf = load_dataset(str(DATA_PATH), False)
-            else:
-                lf = load_dataset("examples/golden.parquet", False)
+            # Dataset already loaded at the top of the function
 
             # Create cache manager (or None to bypass cache)
             cache_manager = None if no_cache else CacheManager()
@@ -421,7 +463,7 @@ def metrics(
     valid_metrics = ["ramp_risk", "reversal", "imbalance"]
     if name not in valid_metrics:
         typer.echo(f"Invalid metric. Choose from: {', '.join(valid_metrics)}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     typer.echo(f"Computing metric: {name}")
     if filters:
@@ -481,7 +523,7 @@ def events(
             dataset_path = "examples/golden.parquet"
         else:
             console.print("[red]Error: No dataset found. Please run 'agent load' first.[/red]")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from None
 
         with console.status("Loading dataset..."):
             lf = load_dataset(path=dataset_path, auto=False)
@@ -605,7 +647,7 @@ def cluster(
     valid_entity_types = ["loc", "counterparty"]
     if entity_type not in valid_entity_types:
         typer.echo(f"Invalid entity type. Choose from: {', '.join(valid_entity_types)}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     typer.echo(f"Clustering {entity_type} entities into {k} clusters...")
 
@@ -752,11 +794,11 @@ def plan(
 
     except FileNotFoundError:
         typer.echo("Error: Data dictionary not found. Run 'agent load' first.", err=True)
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     except Exception as e:
         typer.echo(f"Planning failed: {e}", err=True)
         logger.error("Plan command failed", extra={"error": str(e), "query": query})
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
 
 @app.command()
@@ -783,20 +825,74 @@ def run(
         plan_path = Path(plan_file)
         if not plan_path.exists():
             typer.echo(f"Error: Plan file not found: {plan_file}", err=True)
-            raise typer.Exit(1)
+            raise typer.Exit(1) from None
 
         with open(plan_path) as f:
             plan_data = json.load(f)
 
         plan_graph = PlanGraph(**plan_data)
 
-        # Load dataset
-        lf = load_dataset()
+        # Execute the plan using agent_executor
+        from data_agent.core.agent_executor import execute as agent_execute
+        from data_agent.core.handles import StepHandle, StepStats
+        from data_agent.ingest.loader import load_dataset
 
-        # TODO: Execute the plan using agent_executor when implemented
-        typer.echo(f"Plan loaded: {plan_graph.plan_hash()}")
-        typer.echo(f"Steps: {len(plan_graph.nodes)}")
-        typer.echo("Note: Plan execution will be implemented in Task 4 (Agent Executor)")
+        # Load dataset
+        lf = load_dataset(None, False)
+        dataset_path = config.DATA_PATH
+        if not dataset_path.exists():
+            typer.echo("Error: Dataset not found. Please run 'agent load' first.", err=True)
+            raise typer.Exit(1) from None
+
+        # Create dataset handle
+        stats = StepStats(
+            rows=lf.select(pl.len()).collect().item(),
+            bytes=dataset_path.stat().st_size,
+            columns=len(lf.columns),
+            null_count={},
+            computed_at=__import__("time").time(),
+        )
+
+        dataset_handle = StepHandle(
+            id="raw",
+            store="parquet",
+            path=dataset_path,
+            engine="polars",
+            schema={col: str(dtype) for col, dtype in zip(lf.columns, lf.dtypes)},
+            stats=stats,
+            fingerprint="dataset",
+        )
+
+        # Execute the plan
+        result_df, evidence = agent_execute(plan_graph, dataset_handle)
+
+        typer.echo(f"Plan executed: {plan_graph.plan_hash()}")
+        typer.echo(f"Steps executed: {len(evidence['steps'])}")
+        typer.echo(f"Final result: {result_df.height} rows, {result_df.width} columns")
+
+        # Show result table
+        if result_df.height > 0:
+            typer.echo("\nResult:")
+            typer.echo(str(result_df))
+        else:
+            typer.echo("\nResult: Empty table")
+
+        # Export results if requested
+        if export:
+            output_data = {
+                "plan": plan_graph.model_dump(),
+                "plan_hash": plan_graph.plan_hash(),
+                "result": {
+                    "rows": result_df.height,
+                    "columns": result_df.width,
+                    "data": result_df.to_dicts() if result_df.height <= 100 else "truncated",
+                },
+                "evidence": evidence,
+            }
+
+            with open(export, "w") as f:
+                json.dump(output_data, f, indent=2, default=str)
+            typer.echo(f"\nResults exported to: {export}")
 
         logger.info(
             "Run command executed",
@@ -806,7 +902,7 @@ def run(
     except Exception as e:
         typer.echo(f"Execution failed: {e}", err=True)
         logger.error("Run command failed", extra={"error": str(e), "plan_file": plan_file})
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
 
 @app.command()
@@ -823,7 +919,7 @@ def cache(
     operations = sum([clear, stats, gc])
     if operations > 1:
         typer.echo("Cannot use multiple operations together")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     cache_manager = CacheManager()
     handle_storage = HandleStorage()
@@ -840,15 +936,15 @@ def cache(
         logger.info("Cache and step handles cleared")
     elif gc:
         # Run garbage collection on both cache and step handles
-        cache_stats = cache_manager.garbage_collect()
-        handle_stats = handle_storage.cleanup_expired(config.CACHE_TTL_HOURS)
+        cache_gc_stats = cache_manager.garbage_collect()
+        handle_files_removed = handle_storage.cleanup_expired(config.CACHE_TTL_HOURS)
 
         typer.echo("Garbage Collection Results:")
         typer.echo(
-            f"  Query cache: {cache_stats['files_removed']} files removed, "
-            f"{cache_stats['bytes_freed_mb']:.1f}MB freed"
+            f"  Query cache: {cache_gc_stats['files_removed']} files removed, "
+            f"{cache_gc_stats['bytes_freed_mb']:.1f}MB freed"
         )
-        typer.echo(f"  Step handles: {handle_stats} files removed")
+        typer.echo(f"  Step handles: {handle_files_removed} files removed")
 
         # Show remaining stats
         cache_remaining = cache_manager.stats()
@@ -858,7 +954,7 @@ def cache(
 
         logger.info(
             "Garbage collection completed",
-            extra={"cache_stats": cache_stats, "handle_files_removed": handle_stats},
+            extra={"cache_files_removed": cache_gc_stats, "handle_files_removed": handle_files_removed},
         )
     elif stats:
         # Show stats for both cache and step handles
