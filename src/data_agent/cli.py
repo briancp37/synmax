@@ -174,10 +174,11 @@ def ask(
                 raise typer.Exit(1) from None
 
             # Create dataset handle
+            schema = lf.collect_schema()
             stats = StepStats(
                 rows=lf.select(pl.len()).collect().item(),
                 bytes=dataset_path.stat().st_size,
-                columns=len(lf.columns),
+                columns=len(schema),
                 null_count={},
                 computed_at=time.time(),
             )
@@ -187,7 +188,7 @@ def ask(
                 store="parquet",
                 path=dataset_path,
                 engine="polars",
-                schema={col: str(dtype) for col, dtype in zip(lf.columns, lf.dtypes)},
+                schema={col: str(dtype) for col, dtype in schema.items()},
                 stats=stats,
                 fingerprint="dataset",
             )
@@ -845,10 +846,11 @@ def run(
             raise typer.Exit(1) from None
 
         # Create dataset handle
+        schema = lf.collect_schema()
         stats = StepStats(
             rows=lf.select(pl.len()).collect().item(),
             bytes=dataset_path.stat().st_size,
-            columns=len(lf.columns),
+            columns=len(schema),
             null_count={},
             computed_at=__import__("time").time(),
         )
@@ -858,7 +860,7 @@ def run(
             store="parquet",
             path=dataset_path,
             engine="polars",
-            schema={col: str(dtype) for col, dtype in zip(lf.columns, lf.dtypes)},
+            schema={col: str(dtype) for col, dtype in schema.items()},
             stats=stats,
             fingerprint="dataset",
         )

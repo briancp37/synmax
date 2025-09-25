@@ -73,13 +73,25 @@ class LLMClient:
     ) -> dict[str, Any]:
         """Make a call to OpenAI API."""
         try:
-            call_args = {"model": self.model, "messages": messages, **kwargs}
+            # Convert our model names to OpenAI's model names
+            openai_model = self._get_openai_model_name(self.model)
+            call_args = {"model": openai_model, "messages": messages, **kwargs}
 
             if tools:
                 call_args["tools"] = tools
                 call_args["tool_choice"] = kwargs.get("tool_choice", "auto")
 
-            response = self.openai_client.chat.completions.create(**call_args)
+            # Some models don't support custom temperature, so try without it first
+            response = None
+            try:
+                response = self.openai_client.chat.completions.create(**call_args)
+            except Exception as e:
+                if "temperature" in str(e) and "temperature" in call_args:
+                    # Retry without temperature
+                    call_args_no_temp = {k: v for k, v in call_args.items() if k != "temperature"}
+                    response = self.openai_client.chat.completions.create(**call_args_no_temp)
+                else:
+                    raise
 
             return {
                 "content": response.choices[0].message.content,
@@ -137,6 +149,14 @@ class LLMClient:
             }
         except Exception as e:
             raise Exception(f"Anthropic API call failed: {e}") from e
+
+    def _get_openai_model_name(self, model: ModelName) -> str:
+        """Convert our model names to OpenAI's model names."""
+        model_mapping = {
+            "gpt-4.1": "gpt-4",
+            "gpt-5": "gpt-4",  # Use gpt-4 as fallback since gpt-5 doesn't exist yet
+        }
+        return model_mapping.get(model, model)
 
     def _get_anthropic_model_name(self, model: ModelName) -> str:
         """Convert our model names to Anthropic's model names."""

@@ -196,24 +196,31 @@ class AgentPlanner:
                     "params": {
                         "column": "eff_gas_day",
                         "op": "between",
-                        "value": ["2021-01-01", "2021-12-31"],
+                        "value": ["2022-01-01", "2022-12-31"],
                     },
                 },
                 {
                     "id": "a",
                     "op": "aggregate",
                     "params": {
-                        "groupby": ["pipeline_name"],
+                        "groupby": ["pipeline_name", "eff_gas_day"],
                         "metrics": [{"col": "scheduled_quantity", "fn": "sum"}],
                     },
                 },
-                {"id": "s", "op": "stl_deseasonalize", "params": {"column": "value"}},
+                {"id": "s", "op": "stl_deseasonalize", "params": {"column": "sum_scheduled_quantity"}},
                 {
                     "id": "c",
                     "op": "changepoint",
-                    "params": {"column": "value", "method": "pelt", "min_size": 7},
+                    "params": {
+                        "column": "deseasonalized", 
+                        "method": "pelt", 
+                        "min_size": 7,
+                        "penalty": 1.0,
+                        "min_confidence": 0.1,
+                        "groupby": ["pipeline_name"]
+                    },
                 },
-                {"id": "r", "op": "rank", "params": {"by": ["abs_delta_mean"], "descending": True}},
+                {"id": "r", "op": "rank", "params": {"by": ["change_magnitude"], "descending": True}},
                 {"id": "l", "op": "limit", "params": {"n": 10}},
                 {"id": "e", "op": "evidence_collect", "params": {}},
             ],
@@ -261,8 +268,17 @@ Guidelines:
 2. Use short step IDs (f, a, s, c, r, l, e)
 3. Create linear pipelines typically: filter → aggregate → analysis → rank → limit → evidence
 4. Always end with evidence_collect unless saving artifacts
-5. Use between for date ranges: ["2021-01-01", "2021-12-31"]
+5. Use between for date ranges: ["2022-01-01", "2022-12-31"] (dataset is 2022+)
 6. For time series analysis: aggregate first, then deseasonalize, then changepoint
+
+CRITICAL - Column naming rules:
+- After aggregate with sum: column becomes "sum_<original_column>"
+- After stl_deseasonalize: creates "deseasonalized" column  
+- After changepoint: creates "change_magnitude" column (not "abs_delta_mean")
+- Always include eff_gas_day in groupby for time series: ["pipeline_name", "eff_gas_day"]
+- Changepoint needs groupby: ["pipeline_name"] for per-pipeline analysis
+- For changepoint detection, use: penalty: 1.0, min_confidence: 0.1 (more sensitive)
+
 7. Set outputs to the final meaningful step (usually before evidence_collect)
 
 Example plan for "regime shifts in 2021 after seasonality removal":
@@ -274,17 +290,17 @@ Create a DAG plan that efficiently answers the user's query."""
         """Generate a deterministic fallback plan for common query patterns."""
         query_lower = query.lower()
 
-        # Simple aggregation patterns
-        if any(word in query_lower for word in ["sum", "total", "aggregate"]):
-            return self._create_simple_aggregation_plan(query, available_columns)
-
-        # Time series patterns
-        if any(word in query_lower for word in ["trend", "change", "shift", "regime"]):
+        # Time series patterns (check first - most specific)
+        if any(word in query_lower for word in ["trend", "change", "shift", "regime", "changepoint", "structural", "break", "seasonality", "deseasonalize"]):
             return self._create_time_series_plan(query, available_columns)
 
         # Top-k patterns
         if any(word in query_lower for word in ["top", "highest", "largest", "biggest"]):
             return self._create_top_k_plan(query, available_columns)
+
+        # Simple aggregation patterns
+        if any(word in query_lower for word in ["sum", "total", "aggregate"]):
+            return self._create_simple_aggregation_plan(query, available_columns)
 
         # Default simple plan
         return self._create_default_plan(available_columns)
@@ -316,6 +332,15 @@ Create a DAG plan that efficiently answers the user's query."""
         return PlanGraph(
             nodes=[
                 Step(
+                    id="f",
+                    op=StepType.FILTER,
+                    params={
+                        "column": "eff_gas_day",
+                        "op": "between",
+                        "value": ["2022-01-01", "2022-12-31"],
+                    },
+                ),
+                Step(
                     id="a",
                     op=StepType.AGGREGATE,
                     params={
@@ -324,21 +349,29 @@ Create a DAG plan that efficiently answers the user's query."""
                     },
                 ),
                 Step(
-                    id="s", op=StepType.STL_DESEASONALIZE, params={"column": "scheduled_quantity"}
+                    id="s", op=StepType.STL_DESEASONALIZE, params={"column": "sum_scheduled_quantity"}
                 ),
                 Step(
                     id="c",
                     op=StepType.CHANGEPOINT,
-                    params={"column": "scheduled_quantity", "method": "pelt", "min_size": 7},
+                    params={
+                        "column": "deseasonalized", 
+                        "method": "pelt", 
+                        "min_size": 7,
+                        "penalty": 1.0,
+                        "min_confidence": 0.1,
+                        "groupby": ["pipeline_name"]
+                    },
                 ),
                 Step(
-                    id="r", op=StepType.RANK, params={"by": ["abs_delta_mean"], "descending": True}
+                    id="r", op=StepType.RANK, params={"by": ["change_magnitude"], "descending": True}
                 ),
                 Step(id="l", op=StepType.LIMIT, params={"n": 10}),
                 Step(id="e", op=StepType.EVIDENCE_COLLECT, params={}),
             ],
             edges=[
-                Edge(src="raw", dst="a"),
+                Edge(src="raw", dst="f"),
+                Edge(src="f", dst="a"),
                 Edge(src="a", dst="s"),
                 Edge(src="s", dst="c"),
                 Edge(src="c", dst="r"),

@@ -18,7 +18,7 @@ CACHE_DIR = PROJECT_ROOT / ".cache"
 # Environment variables
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-DATA_AGENT_MODEL = os.getenv("DATA_AGENT_MODEL", "gpt-5")
+DATA_AGENT_MODEL = os.getenv("DATA_AGENT_MODEL", "gpt-4.1")
 DATA_AGENT_CACHE_TTL_HOURS = int(os.getenv("DATA_AGENT_CACHE_TTL_HOURS", "24"))
 
 # Cache and materialization settings

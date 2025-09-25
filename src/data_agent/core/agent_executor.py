@@ -259,6 +259,21 @@ class AgentExecutor:
             return lf.filter(pl.col(column).is_in(value))
         elif op == "between":
             lo, hi = value
+            # Handle date strings by converting to date literals
+            if isinstance(lo, str) and isinstance(hi, str):
+                try:
+                    # Try to parse as date strings
+                    import datetime
+                    lo_date = datetime.datetime.strptime(lo, "%Y-%m-%d")
+                    hi_date = datetime.datetime.strptime(hi, "%Y-%m-%d")
+                    # If successful, use date literals
+                    return lf.filter(
+                        (pl.col(column) >= pl.date(lo_date.year, lo_date.month, lo_date.day)) & 
+                        (pl.col(column) <= pl.date(hi_date.year, hi_date.month, hi_date.day))
+                    )
+                except ValueError:
+                    # Fall back to string comparison
+                    pass
             return lf.filter((pl.col(column) >= lo) & (pl.col(column) <= hi))
         elif op == "is_not_null":
             return lf.filter(pl.col(column).is_not_null())
@@ -385,16 +400,60 @@ class AgentExecutor:
             return lf  # Pass through
 
     def _execute_stl_deseasonalize(self, step: Any, lf: pl.LazyFrame) -> pl.LazyFrame:
-        """Execute STL deseasonalization (placeholder)."""
-        # This would require implementing STL decomposition
-        # For now, return the original data with a placeholder column
-        return lf.with_columns(pl.col(step.params["column"]).alias("deseasonalized"))
+        """Execute STL deseasonalization using the step implementation."""
+        # Use the actual step implementation
+        from .steps import stl_deseasonalize
+        
+        # Create a temporary handle for the step implementation
+        temp_handle = self.handle_storage.materialize_handle(
+            lf.collect(), 
+            f"temp_{step.id}", 
+            f"temp_{step.id}",
+            step.engine
+        )
+        
+        # Run the step implementation
+        result_handle = stl_deseasonalize.run(
+            temp_handle,
+            step.params,
+            self.handle_storage,
+            "dataset"
+        )
+        
+        # Return lazy frame from result
+        if result_handle.path:
+            return pl.scan_parquet(result_handle.path)
+        else:
+            # Fallback to placeholder
+            return lf.with_columns(pl.col(step.params["column"]).alias("deseasonalized"))
 
     def _execute_changepoint(self, step: Any, lf: pl.LazyFrame) -> pl.LazyFrame:
-        """Execute changepoint detection (placeholder)."""
-        # This would require implementing changepoint detection algorithms
-        # For now, return a placeholder result
-        return lf.with_columns(pl.lit(False).alias("is_changepoint"))
+        """Execute changepoint detection using the step implementation."""
+        # Use the actual step implementation
+        from .steps import changepoint
+        
+        # Create a temporary handle for the step implementation
+        temp_handle = self.handle_storage.materialize_handle(
+            lf.collect(), 
+            f"temp_{step.id}", 
+            f"temp_{step.id}",
+            step.engine
+        )
+        
+        # Run the step implementation
+        result_handle = changepoint.run(
+            temp_handle,
+            step.params,
+            self.handle_storage,
+            "dataset"
+        )
+        
+        # Return lazy frame from result
+        if result_handle.path:
+            return pl.scan_parquet(result_handle.path)
+        else:
+            # Fallback to placeholder
+            return lf.with_columns(pl.lit(False).alias("is_changepoint"))
 
     def _execute_save_artifact(self, step: Any, lf: pl.LazyFrame) -> pl.LazyFrame:
         """Execute save artifact operation."""
