@@ -10,7 +10,7 @@ from typing import Any
 import orjson
 import polars as pl
 
-from ..config import CACHE_DIR, DATA_AGENT_CACHE_TTL_HOURS
+from ..config import CACHE_DIR, CACHE_MAX_GB, CACHE_TTL_HOURS, DATA_AGENT_CACHE_TTL_HOURS
 from ..core.plan_schema import Plan
 
 
@@ -159,6 +159,81 @@ class CacheManager:
             for file_path in self.cache_dir.glob("*"):
                 file_path.unlink()
 
+    def garbage_collect(
+        self, max_size_gb: float | None = None, ttl_hours: int | None = None
+    ) -> dict[str, Any]:
+        """Perform garbage collection on cache.
+
+        Args:
+            max_size_gb: Maximum cache size in GB (defaults to config)
+            ttl_hours: TTL threshold in hours (defaults to config)
+
+        Returns:
+            Dictionary with cleanup statistics
+        """
+        max_size_gb = max_size_gb or CACHE_MAX_GB
+        ttl_hours = ttl_hours or CACHE_TTL_HOURS
+
+        if not self.cache_dir.exists():
+            return {"files_removed": 0, "bytes_freed": 0, "reason": "cache_dir_not_found"}
+
+        files_removed = 0
+        bytes_freed = 0
+        current_time = time.time()
+        ttl_seconds = ttl_hours * 3600
+
+        # Get all cache file pairs
+        parquet_files = list(self.cache_dir.glob("*.parquet"))
+        file_pairs = []
+
+        for parquet_file in parquet_files:
+            json_file = parquet_file.with_suffix(".json")
+            if json_file.exists():
+                file_size = parquet_file.stat().st_size + json_file.stat().st_size
+                file_mtime = parquet_file.stat().st_mtime
+                file_pairs.append((parquet_file, json_file, file_size, file_mtime))
+
+        # Remove expired files first
+        for parquet_file, json_file, file_size, file_mtime in file_pairs[:]:
+            if (current_time - file_mtime) > ttl_seconds:
+                try:
+                    parquet_file.unlink()
+                    json_file.unlink()
+                    files_removed += 2
+                    bytes_freed += file_size
+                    file_pairs.remove((parquet_file, json_file, file_size, file_mtime))
+                except OSError:
+                    pass
+
+        # Check if we're still over size limit
+        total_size = sum(size for _, _, size, _ in file_pairs)
+        max_size_bytes = max_size_gb * 1024 * 1024 * 1024
+
+        if total_size > max_size_bytes:
+            # Remove oldest files until under limit
+            file_pairs.sort(key=lambda x: x[3])  # Sort by mtime (oldest first)
+
+            for parquet_file, json_file, file_size, _ in file_pairs:
+                if total_size <= max_size_bytes:
+                    break
+
+                try:
+                    parquet_file.unlink()
+                    json_file.unlink()
+                    files_removed += 2
+                    bytes_freed += file_size
+                    total_size -= file_size
+                except OSError:
+                    pass
+
+        return {
+            "files_removed": files_removed,
+            "bytes_freed": bytes_freed,
+            "bytes_freed_mb": bytes_freed / (1024 * 1024),
+            "remaining_size_bytes": total_size,
+            "remaining_size_mb": total_size / (1024 * 1024),
+        }
+
     def stats(self) -> dict[str, Any]:
         """Get cache statistics.
 
@@ -186,6 +261,8 @@ class CacheManager:
             "parquet_files": len(parquet_files),
             "json_files": len(json_files),
             "total_size_bytes": total_size,
+            "total_size_mb": total_size / (1024 * 1024),
             "valid_entries": valid_entries,
             "ttl_hours": self.ttl_hours,
+            "max_size_gb": CACHE_MAX_GB,
         }

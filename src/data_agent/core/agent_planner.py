@@ -9,7 +9,7 @@ import json
 import logging
 from typing import Any, Optional
 
-from .agent_schema import PlanGraph, Step, Edge, StepType
+from .agent_schema import Edge, PlanGraph, Step, StepType
 from .llm_client import LLMClient, get_default_llm_client
 
 logger = logging.getLogger(__name__)
@@ -63,7 +63,7 @@ class AgentPlanner:
 
         # Validate and repair the plan
         repaired_plan = self._repair_plan(plan, available_columns)
-        
+
         # Final validation
         try:
             repaired_plan.model_validate(repaired_plan.model_dump())
@@ -78,12 +78,12 @@ class AgentPlanner:
         """Generate plan using LLM function calling."""
         # Build the function schema
         function_schema = self._build_function_schema(available_columns)
-        
+
         # Create the prompt
         system_prompt = self._build_system_prompt(available_columns)
         messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Create a DAG plan for this query: {query}"}
+            {"role": "user", "content": f"Create a DAG plan for this query: {query}"},
         ]
 
         # Call LLM with function schema
@@ -112,7 +112,7 @@ class AgentPlanner:
         """Build the function schema for LLM function calling."""
         # Get the base schema from PlanGraph
         base_schema = PlanGraph.model_json_schema()
-        
+
         # Enhance with available columns information
         function_schema = {
             "name": "create_dag_plan",
@@ -128,30 +128,30 @@ class AgentPlanner:
                             "properties": {
                                 "id": {
                                     "type": "string",
-                                    "description": "Unique identifier for this step (use short names like 'f', 'a', 's')"
+                                    "description": "Unique identifier for this step (use short names like 'f', 'a', 's')",
                                 },
                                 "op": {
                                     "type": "string",
                                     "enum": [op.value for op in StepType],
-                                    "description": "Operation type"
+                                    "description": "Operation type",
                                 },
                                 "params": {
                                     "type": "object",
-                                    "description": "Parameters for the operation"
+                                    "description": "Parameters for the operation",
                                 },
                                 "engine": {
                                     "type": "string",
                                     "enum": ["polars", "duckdb"],
                                     "default": "polars",
-                                    "description": "Processing engine to use"
+                                    "description": "Processing engine to use",
                                 },
                                 "materialize": {
                                     "type": "boolean",
-                                    "description": "Whether to materialize intermediate results"
-                                }
+                                    "description": "Whether to materialize intermediate results",
+                                },
                             },
-                            "required": ["id", "op", "params"]
-                        }
+                            "required": ["id", "op", "params"],
+                        },
                     },
                     "edges": {
                         "type": "array",
@@ -160,42 +160,61 @@ class AgentPlanner:
                             "type": "object",
                             "properties": {
                                 "src": {"type": "string", "description": "Source step ID"},
-                                "dst": {"type": "string", "description": "Destination step ID"}
+                                "dst": {"type": "string", "description": "Destination step ID"},
                             },
-                            "required": ["src", "dst"]
-                        }
+                            "required": ["src", "dst"],
+                        },
                     },
                     "inputs": {
                         "type": "array",
                         "items": {"type": "string"},
                         "default": ["raw"],
-                        "description": "Input data sources"
+                        "description": "Input data sources",
                     },
                     "outputs": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Output step IDs"
-                    }
+                        "description": "Output step IDs",
+                    },
                 },
-                "required": ["nodes", "edges"]
-            }
+                "required": ["nodes", "edges"],
+            },
         }
-        
+
         return function_schema
 
     def _build_system_prompt(self, available_columns: list[str]) -> str:
         """Build the system prompt for LLM planning."""
         columns_str = ", ".join(available_columns)
-        
+
         example_plan = {
             "nodes": [
-                {"id": "f", "op": "filter", "params": {"column": "eff_gas_day", "op": "between", "value": ["2021-01-01", "2021-12-31"]}},
-                {"id": "a", "op": "aggregate", "params": {"groupby": ["pipeline_name"], "metrics": [{"col": "scheduled_quantity", "fn": "sum"}]}},
+                {
+                    "id": "f",
+                    "op": "filter",
+                    "params": {
+                        "column": "eff_gas_day",
+                        "op": "between",
+                        "value": ["2021-01-01", "2021-12-31"],
+                    },
+                },
+                {
+                    "id": "a",
+                    "op": "aggregate",
+                    "params": {
+                        "groupby": ["pipeline_name"],
+                        "metrics": [{"col": "scheduled_quantity", "fn": "sum"}],
+                    },
+                },
                 {"id": "s", "op": "stl_deseasonalize", "params": {"column": "value"}},
-                {"id": "c", "op": "changepoint", "params": {"column": "value", "method": "pelt", "min_size": 7}},
+                {
+                    "id": "c",
+                    "op": "changepoint",
+                    "params": {"column": "value", "method": "pelt", "min_size": 7},
+                },
                 {"id": "r", "op": "rank", "params": {"by": ["abs_delta_mean"], "descending": True}},
                 {"id": "l", "op": "limit", "params": {"n": 10}},
-                {"id": "e", "op": "evidence_collect", "params": {}}
+                {"id": "e", "op": "evidence_collect", "params": {}},
             ],
             "edges": [
                 {"src": "raw", "dst": "f"},
@@ -204,10 +223,10 @@ class AgentPlanner:
                 {"src": "s", "dst": "c"},
                 {"src": "c", "dst": "r"},
                 {"src": "r", "dst": "l"},
-                {"src": "l", "dst": "e"}
+                {"src": "l", "dst": "e"},
             ],
             "inputs": ["raw"],
-            "outputs": ["l"]
+            "outputs": ["l"],
         }
 
         return f"""You are an expert data processing planner. Convert natural language queries into structured DAG plans for gas pipeline data analysis.
@@ -250,57 +269,69 @@ Create a DAG plan that efficiently answers the user's query."""
     def _fallback_plan(self, query: str, available_columns: list[str]) -> PlanGraph:
         """Generate a deterministic fallback plan for common query patterns."""
         query_lower = query.lower()
-        
+
         # Simple aggregation patterns
         if any(word in query_lower for word in ["sum", "total", "aggregate"]):
             return self._create_simple_aggregation_plan(query, available_columns)
-        
+
         # Time series patterns
         if any(word in query_lower for word in ["trend", "change", "shift", "regime"]):
             return self._create_time_series_plan(query, available_columns)
-        
+
         # Top-k patterns
         if any(word in query_lower for word in ["top", "highest", "largest", "biggest"]):
             return self._create_top_k_plan(query, available_columns)
-        
+
         # Default simple plan
         return self._create_default_plan(available_columns)
 
-    def _create_simple_aggregation_plan(self, query: str, available_columns: list[str]) -> PlanGraph:
+    def _create_simple_aggregation_plan(
+        self, query: str, available_columns: list[str]
+    ) -> PlanGraph:
         """Create a simple aggregation plan."""
         return PlanGraph(
             nodes=[
-                Step(id="a", op=StepType.AGGREGATE, params={
-                    "groupby": ["pipeline_name"],
-                    "metrics": [{"col": "scheduled_quantity", "fn": "sum"}]
-                }),
+                Step(
+                    id="a",
+                    op=StepType.AGGREGATE,
+                    params={
+                        "groupby": ["pipeline_name"],
+                        "metrics": [{"col": "scheduled_quantity", "fn": "sum"}],
+                    },
+                ),
                 Step(id="l", op=StepType.LIMIT, params={"n": 100}),
-                Step(id="e", op=StepType.EVIDENCE_COLLECT, params={})
+                Step(id="e", op=StepType.EVIDENCE_COLLECT, params={}),
             ],
-            edges=[
-                Edge(src="raw", dst="a"),
-                Edge(src="a", dst="l"),
-                Edge(src="l", dst="e")
-            ],
+            edges=[Edge(src="raw", dst="a"), Edge(src="a", dst="l"), Edge(src="l", dst="e")],
             inputs=["raw"],
-            outputs=["l"]
+            outputs=["l"],
         )
 
     def _create_time_series_plan(self, query: str, available_columns: list[str]) -> PlanGraph:
         """Create a time series analysis plan."""
         return PlanGraph(
             nodes=[
-                Step(id="a", op=StepType.AGGREGATE, params={
-                    "groupby": ["pipeline_name", "eff_gas_day"],
-                    "metrics": [{"col": "scheduled_quantity", "fn": "sum"}]
-                }),
-                Step(id="s", op=StepType.STL_DESEASONALIZE, params={"column": "scheduled_quantity"}),
-                Step(id="c", op=StepType.CHANGEPOINT, params={
-                    "column": "scheduled_quantity", "method": "pelt", "min_size": 7
-                }),
-                Step(id="r", op=StepType.RANK, params={"by": ["abs_delta_mean"], "descending": True}),
+                Step(
+                    id="a",
+                    op=StepType.AGGREGATE,
+                    params={
+                        "groupby": ["pipeline_name", "eff_gas_day"],
+                        "metrics": [{"col": "scheduled_quantity", "fn": "sum"}],
+                    },
+                ),
+                Step(
+                    id="s", op=StepType.STL_DESEASONALIZE, params={"column": "scheduled_quantity"}
+                ),
+                Step(
+                    id="c",
+                    op=StepType.CHANGEPOINT,
+                    params={"column": "scheduled_quantity", "method": "pelt", "min_size": 7},
+                ),
+                Step(
+                    id="r", op=StepType.RANK, params={"by": ["abs_delta_mean"], "descending": True}
+                ),
                 Step(id="l", op=StepType.LIMIT, params={"n": 10}),
-                Step(id="e", op=StepType.EVIDENCE_COLLECT, params={})
+                Step(id="e", op=StepType.EVIDENCE_COLLECT, params={}),
             ],
             edges=[
                 Edge(src="raw", dst="a"),
@@ -308,37 +339,46 @@ Create a DAG plan that efficiently answers the user's query."""
                 Edge(src="s", dst="c"),
                 Edge(src="c", dst="r"),
                 Edge(src="r", dst="l"),
-                Edge(src="l", dst="e")
+                Edge(src="l", dst="e"),
             ],
             inputs=["raw"],
-            outputs=["l"]
+            outputs=["l"],
         )
 
     def _create_top_k_plan(self, query: str, available_columns: list[str]) -> PlanGraph:
         """Create a top-k ranking plan."""
         # Extract number if present
         import re
-        numbers = re.findall(r'\d+', query)
+
+        numbers = re.findall(r"\d+", query)
         k = int(numbers[0]) if numbers else 10
-        
+
         return PlanGraph(
             nodes=[
-                Step(id="a", op=StepType.AGGREGATE, params={
-                    "groupby": ["pipeline_name"],
-                    "metrics": [{"col": "scheduled_quantity", "fn": "sum"}]
-                }),
-                Step(id="r", op=StepType.RANK, params={"by": ["scheduled_quantity"], "descending": True}),
+                Step(
+                    id="a",
+                    op=StepType.AGGREGATE,
+                    params={
+                        "groupby": ["pipeline_name"],
+                        "metrics": [{"col": "scheduled_quantity", "fn": "sum"}],
+                    },
+                ),
+                Step(
+                    id="r",
+                    op=StepType.RANK,
+                    params={"by": ["scheduled_quantity"], "descending": True},
+                ),
                 Step(id="l", op=StepType.LIMIT, params={"n": k}),
-                Step(id="e", op=StepType.EVIDENCE_COLLECT, params={})
+                Step(id="e", op=StepType.EVIDENCE_COLLECT, params={}),
             ],
             edges=[
                 Edge(src="raw", dst="a"),
                 Edge(src="a", dst="r"),
                 Edge(src="r", dst="l"),
-                Edge(src="l", dst="e")
+                Edge(src="l", dst="e"),
             ],
             inputs=["raw"],
-            outputs=["l"]
+            outputs=["l"],
         )
 
     def _create_default_plan(self, available_columns: list[str]) -> PlanGraph:
@@ -346,14 +386,11 @@ Create a DAG plan that efficiently answers the user's query."""
         return PlanGraph(
             nodes=[
                 Step(id="l", op=StepType.LIMIT, params={"n": 100}),
-                Step(id="e", op=StepType.EVIDENCE_COLLECT, params={})
+                Step(id="e", op=StepType.EVIDENCE_COLLECT, params={}),
             ],
-            edges=[
-                Edge(src="raw", dst="l"),
-                Edge(src="l", dst="e")
-            ],
+            edges=[Edge(src="raw", dst="l"), Edge(src="l", dst="e")],
             inputs=["raw"],
-            outputs=["l"]
+            outputs=["l"],
         )
 
     def _repair_plan(self, plan: PlanGraph, available_columns: list[str]) -> PlanGraph:
@@ -377,7 +414,9 @@ Create a DAG plan that efficiently answers the user's query."""
             repaired_plan = self._add_limit(repaired_plan)
 
         # Validate column references
-        repaired_plan = self._validate_column_references(repaired_plan, available_columns, repair_log)
+        repaired_plan = self._validate_column_references(
+            repaired_plan, available_columns, repair_log
+        )
 
         if repair_log:
             logger.info("Plan repaired", extra={"repairs": repair_log})
@@ -388,16 +427,16 @@ Create a DAG plan that efficiently answers the user's query."""
         """Check if there's a valid path from inputs to outputs."""
         if not plan.outputs:
             return True  # No outputs specified, any structure is valid
-        
+
         # Build adjacency list
         graph = {}
         all_nodes = set([step.id for step in plan.nodes] + plan.inputs)
         for node in all_nodes:
             graph[node] = []
-        
+
         for edge in plan.edges:
             graph[edge.src].append(edge.dst)
-        
+
         # Check reachability from inputs to outputs
         for output in plan.outputs:
             reachable = False
@@ -407,29 +446,29 @@ Create a DAG plan that efficiently answers the user's query."""
                     break
             if not reachable:
                 return False
-        
+
         return True
 
     def _is_reachable(self, graph: dict[str, list[str]], start: str, end: str) -> bool:
         """Check if end is reachable from start using BFS."""
         if start == end:
             return True
-        
+
         visited = set()
         queue = [start]
-        
+
         while queue:
             node = queue.pop(0)
             if node in visited:
                 continue
             visited.add(node)
-            
+
             for neighbor in graph.get(node, []):
                 if neighbor == end:
                     return True
                 if neighbor not in visited:
                     queue.append(neighbor)
-        
+
         return False
 
     def _add_missing_connections(self, plan: PlanGraph) -> PlanGraph:
@@ -440,7 +479,7 @@ Create a DAG plan that efficiently answers the user's query."""
             plan.edges.append(Edge(src="raw", dst=first_node.id))
             if not plan.outputs:
                 plan.outputs = [first_node.id]
-        
+
         return plan
 
     def _has_evidence_collect(self, plan: PlanGraph) -> bool:
@@ -451,12 +490,12 @@ Create a DAG plan that efficiently answers the user's query."""
         """Add evidence_collect step to the plan."""
         evidence_step = Step(id="evidence", op=StepType.EVIDENCE_COLLECT, params={})
         plan.nodes.append(evidence_step)
-        
+
         # Connect final outputs to evidence
         if plan.outputs:
             for output_id in plan.outputs:
                 plan.edges.append(Edge(src=output_id, dst="evidence"))
-        
+
         return plan
 
     def _needs_limit(self, plan: PlanGraph) -> bool:
@@ -464,7 +503,7 @@ Create a DAG plan that efficiently answers the user's query."""
         # Look for aggregations without limits
         has_aggregation = any(step.op == StepType.AGGREGATE for step in plan.nodes)
         has_limit = any(step.op == StepType.LIMIT for step in plan.nodes)
-        
+
         return has_aggregation and not has_limit
 
     def _add_limit(self, plan: PlanGraph) -> PlanGraph:
@@ -479,12 +518,12 @@ Create a DAG plan that efficiently answers the user's query."""
                 # Insert limit before evidence
                 limit_step = Step(id="auto_limit", op=StepType.LIMIT, params={"n": 1000})
                 plan.nodes.append(limit_step)
-                
+
                 # Redirect edges
                 for edge in incoming_edges:
                     edge.dst = limit_step.id
                 plan.edges.append(Edge(src=limit_step.id, dst=evidence_step.id))
-        
+
         return plan
 
     def _validate_column_references(
@@ -492,7 +531,7 @@ Create a DAG plan that efficiently answers the user's query."""
     ) -> PlanGraph:
         """Validate and repair column references in the plan."""
         available_set = set(available_columns)
-        
+
         for step in plan.nodes:
             if step.op == StepType.FILTER:
                 column = step.params.get("column")
@@ -503,7 +542,7 @@ Create a DAG plan that efficiently answers the user's query."""
                     if similar:
                         step.params["column"] = similar
                         repair_log.append(f"Replaced with similar column '{similar}'")
-            
+
             elif step.op == StepType.AGGREGATE:
                 groupby = step.params.get("groupby", [])
                 for i, col in enumerate(groupby):
@@ -512,7 +551,7 @@ Create a DAG plan that efficiently answers the user's query."""
                         if similar:
                             groupby[i] = similar
                             repair_log.append(f"Replaced groupby column '{col}' with '{similar}'")
-                
+
                 metrics = step.params.get("metrics", [])
                 for metric in metrics:
                     col = metric.get("col")
@@ -521,23 +560,23 @@ Create a DAG plan that efficiently answers the user's query."""
                         if similar:
                             metric["col"] = similar
                             repair_log.append(f"Replaced metric column '{col}' with '{similar}'")
-        
+
         return plan
 
     def _find_similar_column(self, target: str, available: list[str]) -> Optional[str]:
         """Find the most similar column name."""
         target_lower = target.lower()
-        
+
         # Exact match (case insensitive)
         for col in available:
             if col.lower() == target_lower:
                 return col
-        
+
         # Substring match
         for col in available:
             if target_lower in col.lower() or col.lower() in target_lower:
                 return col
-        
+
         return None
 
 
@@ -546,9 +585,19 @@ def plan_from_llm(query: str, client: Optional[LLMClient] = None) -> PlanGraph:
     planner = AgentPlanner(client)
     # For now, use a basic set of columns - in real usage this would come from data dictionary
     available_columns = [
-        "pipeline_name", "loc_name", "connecting_pipeline", "connecting_entity",
-        "rec_del_sign", "category_short", "country_name", "state_abb", "county_name",
-        "latitude", "longitude", "eff_gas_day", "scheduled_quantity"
+        "pipeline_name",
+        "loc_name",
+        "connecting_pipeline",
+        "connecting_entity",
+        "rec_del_sign",
+        "category_short",
+        "country_name",
+        "state_abb",
+        "county_name",
+        "latitude",
+        "longitude",
+        "eff_gas_day",
+        "scheduled_quantity",
     ]
     return planner.plan(query, available_columns)
 
@@ -563,7 +612,7 @@ def estimate_plan_complexity(plan: PlanGraph) -> dict[str, Any]:
         "will_checkpoint": [],
         "topological_order": plan.topological_order(),
     }
-    
+
     # Simple heuristics for estimation
     for step in plan.nodes:
         if step.op in [StepType.STL_DESEASONALIZE, StepType.CHANGEPOINT]:
@@ -576,5 +625,5 @@ def estimate_plan_complexity(plan: PlanGraph) -> dict[str, Any]:
         else:
             estimates["estimated_time_seconds"] += 0.5
             estimates["estimated_memory_mb"] += 10
-    
+
     return estimates
