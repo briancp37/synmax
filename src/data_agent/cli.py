@@ -818,20 +818,13 @@ def run(
     import json
     from pathlib import Path
 
-    from data_agent.core.agent_schema import PlanGraph
+    from data_agent.core.dsl_loader import DSLLoader, DSLValidationError
     from data_agent.ingest.loader import load_dataset
 
     try:
-        # Load and validate plan
-        plan_path = Path(plan_file)
-        if not plan_path.exists():
-            typer.echo(f"Error: Plan file not found: {plan_file}", err=True)
-            raise typer.Exit(1) from None
-
-        with open(plan_path) as f:
-            plan_data = json.load(f)
-
-        plan_graph = PlanGraph(**plan_data)
+        # Load and validate plan using DSL loader
+        dsl_loader = DSLLoader()
+        plan_graph = dsl_loader.load_plan(plan_file)
 
         # Execute the plan using agent_executor
         from data_agent.core.agent_executor import execute as agent_execute
@@ -901,10 +894,37 @@ def run(
             extra={"plan_file": plan_file, "plan_hash": plan_graph.plan_hash()},
         )
 
+    except DSLValidationError as e:
+        typer.echo(f"Plan validation failed: {e}", err=True)
+        logger.error("Plan validation failed", extra={"error": str(e), "plan_file": plan_file})
+        raise typer.Exit(1) from e
+    except FileNotFoundError as e:
+        typer.echo(f"Plan file not found: {e}", err=True)
+        raise typer.Exit(1) from e
     except Exception as e:
         typer.echo(f"Execution failed: {e}", err=True)
         logger.error("Run command failed", extra={"error": str(e), "plan_file": plan_file})
         raise typer.Exit(1) from None
+
+
+@app.command()
+def macros() -> None:
+    """List available deterministic plan macros."""
+    from data_agent.core.dsl_loader import get_available_macros
+    
+    macros_dict = get_available_macros()
+    
+    typer.echo("Available Plan Macros:")
+    typer.echo("=" * 40)
+    
+    for name, description in macros_dict.items():
+        typer.echo(f"• {name}: {description}")
+    
+    typer.echo("\nUsage:")
+    typer.echo("  agent ask 'your query' --planner deterministic  # Uses fallback macros")
+    typer.echo("  agent run --plan examples/my_plan.json         # Load custom plan")
+    
+    logger.info("Macros command executed")
 
 
 @app.command()

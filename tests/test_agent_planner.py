@@ -47,13 +47,9 @@ class TestAgentPlanner:
         assert planner.client == client
 
     def test_initialization_without_client(self):
-        """Test planner initialization with default client."""
-        with patch("data_agent.core.agent_planner.get_default_llm_client") as mock_get_client:
-            mock_client = Mock(spec=LLMClient)
-            mock_get_client.return_value = mock_client
-            planner = AgentPlanner()
-            assert planner.client == mock_client
-            mock_get_client.assert_called_once()
+        """Test planner initialization without client (allows None)."""
+        planner = AgentPlanner()
+        assert planner.client is None
 
     def test_build_function_schema(self):
         """Test function schema building for LLM."""
@@ -477,9 +473,12 @@ class TestPlanFromLLMFunction:
         mock_planner_class.assert_called_once_with(mock_client)
         mock_planner.plan.assert_called_once()
 
+    @patch("data_agent.core.agent_planner.get_default_llm_client")
     @patch("data_agent.core.agent_planner.AgentPlanner")
-    def test_plan_from_llm_without_client(self, mock_planner_class):
+    def test_plan_from_llm_without_client(self, mock_planner_class, mock_get_client):
         """Test plan_from_llm function without client (uses default)."""
+        mock_client = Mock(spec=LLMClient)
+        mock_get_client.return_value = mock_client
         mock_planner = Mock()
         mock_plan = Mock(spec=PlanGraph)
         mock_planner_class.return_value = mock_planner
@@ -488,7 +487,8 @@ class TestPlanFromLLMFunction:
         result = plan_from_llm("test query")
 
         assert result == mock_plan
-        mock_planner_class.assert_called_once_with(None)
+        mock_get_client.assert_called_once()
+        mock_planner_class.assert_called_once_with(mock_client)
 
 
 class TestIntegrationScenarios:

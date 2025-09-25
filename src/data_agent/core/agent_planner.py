@@ -10,6 +10,7 @@ import logging
 from typing import Any, Optional
 
 from .agent_schema import Edge, PlanGraph, Step, StepType
+from .dsl_loader import create_macro_plan, get_available_macros
 from .llm_client import LLMClient, get_default_llm_client
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ class AgentPlanner:
 
     def __init__(self, client: Optional[LLMClient] = None):
         """Initialize the planner with an LLM client."""
-        self.client = client or get_default_llm_client()
+        self.client = client
 
     def plan(
         self,
@@ -76,6 +77,9 @@ class AgentPlanner:
         self, query: str, available_columns: list[str], temperature: float
     ) -> PlanGraph:
         """Generate plan using LLM function calling."""
+        if self.client is None:
+            raise ValueError("No LLM client available for planning")
+            
         # Build the function schema
         function_schema = self._build_function_schema(available_columns)
 
@@ -292,143 +296,30 @@ Create a DAG plan that efficiently answers the user's query."""
 
         # Time series patterns (check first - most specific)
         if any(word in query_lower for word in ["trend", "change", "shift", "regime", "changepoint", "structural", "break", "seasonality", "deseasonalize"]):
-            return self._create_time_series_plan(query, available_columns)
+            logger.info("Using time_series_analysis macro for fallback")
+            return create_macro_plan("time_series_analysis")
 
         # Top-k patterns
         if any(word in query_lower for word in ["top", "highest", "largest", "biggest"]):
-            return self._create_top_k_plan(query, available_columns)
+            # Extract number if present
+            import re
+            numbers = re.findall(r"\d+", query)
+            k = int(numbers[0]) if numbers else 10
+            logger.info(f"Using top_k_ranking macro for fallback with k={k}")
+            return create_macro_plan("top_k_ranking", k=k)
 
         # Simple aggregation patterns
         if any(word in query_lower for word in ["sum", "total", "aggregate"]):
-            return self._create_simple_aggregation_plan(query, available_columns)
+            logger.info("Using simple_aggregation macro for fallback")
+            return create_macro_plan("simple_aggregation")
 
-        # Default simple plan
-        return self._create_default_plan(available_columns)
+        # Default simple plan - use simple aggregation macro
+        logger.info("Using default simple_aggregation macro for fallback")
+        return create_macro_plan("simple_aggregation", limit=100)
 
-    def _create_simple_aggregation_plan(
-        self, query: str, available_columns: list[str]
-    ) -> PlanGraph:
-        """Create a simple aggregation plan."""
-        return PlanGraph(
-            nodes=[
-                Step(
-                    id="a",
-                    op=StepType.AGGREGATE,
-                    params={
-                        "groupby": ["pipeline_name"],
-                        "metrics": [{"col": "scheduled_quantity", "fn": "sum"}],
-                    },
-                ),
-                Step(id="l", op=StepType.LIMIT, params={"n": 100}),
-                Step(id="e", op=StepType.EVIDENCE_COLLECT, params={}),
-            ],
-            edges=[Edge(src="raw", dst="a"), Edge(src="a", dst="l"), Edge(src="l", dst="e")],
-            inputs=["raw"],
-            outputs=["l"],
-        )
 
-    def _create_time_series_plan(self, query: str, available_columns: list[str]) -> PlanGraph:
-        """Create a time series analysis plan."""
-        return PlanGraph(
-            nodes=[
-                Step(
-                    id="f",
-                    op=StepType.FILTER,
-                    params={
-                        "column": "eff_gas_day",
-                        "op": "between",
-                        "value": ["2022-01-01", "2022-12-31"],
-                    },
-                ),
-                Step(
-                    id="a",
-                    op=StepType.AGGREGATE,
-                    params={
-                        "groupby": ["pipeline_name", "eff_gas_day"],
-                        "metrics": [{"col": "scheduled_quantity", "fn": "sum"}],
-                    },
-                ),
-                Step(
-                    id="s", op=StepType.STL_DESEASONALIZE, params={"column": "sum_scheduled_quantity"}
-                ),
-                Step(
-                    id="c",
-                    op=StepType.CHANGEPOINT,
-                    params={
-                        "column": "deseasonalized", 
-                        "method": "pelt", 
-                        "min_size": 7,
-                        "penalty": 1.0,
-                        "min_confidence": 0.1,
-                        "groupby": ["pipeline_name"]
-                    },
-                ),
-                Step(
-                    id="r", op=StepType.RANK, params={"by": ["change_magnitude"], "descending": True}
-                ),
-                Step(id="l", op=StepType.LIMIT, params={"n": 10}),
-                Step(id="e", op=StepType.EVIDENCE_COLLECT, params={}),
-            ],
-            edges=[
-                Edge(src="raw", dst="f"),
-                Edge(src="f", dst="a"),
-                Edge(src="a", dst="s"),
-                Edge(src="s", dst="c"),
-                Edge(src="c", dst="r"),
-                Edge(src="r", dst="l"),
-                Edge(src="l", dst="e"),
-            ],
-            inputs=["raw"],
-            outputs=["l"],
-        )
 
-    def _create_top_k_plan(self, query: str, available_columns: list[str]) -> PlanGraph:
-        """Create a top-k ranking plan."""
-        # Extract number if present
-        import re
 
-        numbers = re.findall(r"\d+", query)
-        k = int(numbers[0]) if numbers else 10
-
-        return PlanGraph(
-            nodes=[
-                Step(
-                    id="a",
-                    op=StepType.AGGREGATE,
-                    params={
-                        "groupby": ["pipeline_name"],
-                        "metrics": [{"col": "scheduled_quantity", "fn": "sum"}],
-                    },
-                ),
-                Step(
-                    id="r",
-                    op=StepType.RANK,
-                    params={"by": ["scheduled_quantity"], "descending": True},
-                ),
-                Step(id="l", op=StepType.LIMIT, params={"n": k}),
-                Step(id="e", op=StepType.EVIDENCE_COLLECT, params={}),
-            ],
-            edges=[
-                Edge(src="raw", dst="a"),
-                Edge(src="a", dst="r"),
-                Edge(src="r", dst="l"),
-                Edge(src="l", dst="e"),
-            ],
-            inputs=["raw"],
-            outputs=["l"],
-        )
-
-    def _create_default_plan(self, available_columns: list[str]) -> PlanGraph:
-        """Create a default exploration plan."""
-        return PlanGraph(
-            nodes=[
-                Step(id="l", op=StepType.LIMIT, params={"n": 100}),
-                Step(id="e", op=StepType.EVIDENCE_COLLECT, params={}),
-            ],
-            edges=[Edge(src="raw", dst="l"), Edge(src="l", dst="e")],
-            inputs=["raw"],
-            outputs=["l"],
-        )
 
     def _repair_plan(self, plan: PlanGraph, available_columns: list[str]) -> PlanGraph:
         """Repair and validate a plan."""
@@ -459,6 +350,27 @@ Create a DAG plan that efficiently answers the user's query."""
             logger.info("Plan repaired", extra={"repairs": repair_log})
 
         return repaired_plan
+
+    def plan_from_macro(self, macro_name: str, **kwargs: Any) -> PlanGraph:
+        """Create a plan using a predefined macro.
+        
+        Args:
+            macro_name: Name of the macro to use
+            **kwargs: Additional parameters for the macro
+            
+        Returns:
+            PlanGraph created from the macro
+            
+        Raises:
+            ValueError: If the macro name is not recognized
+        """
+        try:
+            plan = create_macro_plan(macro_name, **kwargs)
+            logger.info(f"Created plan from macro: {macro_name}")
+            return plan
+        except ValueError as e:
+            available_macros = list(get_available_macros().keys())
+            raise ValueError(f"Unknown macro '{macro_name}'. Available macros: {available_macros}") from e
 
     def _has_valid_path(self, plan: PlanGraph) -> bool:
         """Check if there's a valid path from inputs to outputs."""
@@ -619,6 +531,8 @@ Create a DAG plan that efficiently answers the user's query."""
 
 def plan_from_llm(query: str, client: Optional[LLMClient] = None) -> PlanGraph:
     """Convenience function for LLM-based planning."""
+    if client is None:
+        client = get_default_llm_client()
     planner = AgentPlanner(client)
     # For now, use a basic set of columns - in real usage this would come from data dictionary
     available_columns = [

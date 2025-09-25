@@ -1,0 +1,57 @@
+{
+  "nodes": [
+    {
+      "id": "a",
+      "op": "aggregate",
+      "params": {
+        "groupby": ["pipeline_name"],
+        "metrics": [
+          {
+            "col": "scheduled_quantity",
+            "fn": "sum"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r",
+      "op": "rank",
+      "params": {
+        "by": ["sum_scheduled_quantity"],
+        "descending": true
+      }
+    },
+    {
+      "id": "l",
+      "op": "limit",
+      "params": {
+        "n": 10
+      }
+    },
+    {
+      "id": "e",
+      "op": "evidence_collect",
+      "params": {}
+    }
+  ],
+  "edges": [
+    {
+      "src": "raw",
+      "dst": "a"
+    },
+    {
+      "src": "a",
+      "dst": "r"
+    },
+    {
+      "src": "r",
+      "dst": "l"
+    },
+    {
+      "src": "l",
+      "dst": "e"
+    }
+  ],
+  "inputs": ["raw"],
+  "outputs": ["l"]
+}
