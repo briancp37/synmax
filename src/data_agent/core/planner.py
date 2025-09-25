@@ -19,6 +19,11 @@ _PATTERNS = [
         re.compile(r"top (\d+) states by total scheduled quantity in (\d{4})", re.I),
         "top_states_year",
     ),
+    # top N states by gas volume (general)
+    (
+        re.compile(r"top (\d+) states by (?:gas )?volume", re.I),
+        "top_states_volume",
+    ),
     # deliveries for pipeline in date range
     (
         re.compile(
@@ -69,7 +74,10 @@ _PATTERNS = [
     (re.compile(r"cluster locations? by (.+)", re.I), "cluster_locations"),
     (re.compile(r"group locations? by (.+)", re.I), "cluster_locations"),
     (re.compile(r"find locations? with similar (.+)", re.I), "cluster_locations"),
-    (re.compile(r"cluster counterparties? by (.+) into (\d+) groups?", re.I), "cluster_counterparties"),
+    (
+        re.compile(r"cluster counterparties? by (.+) into (\d+) groups?", re.I),
+        "cluster_counterparties",
+    ),
     (re.compile(r"cluster counterparties? by (.+)", re.I), "cluster_counterparties"),
     (re.compile(r"group counterparties? by (.+)", re.I), "cluster_counterparties"),
     (re.compile(r"find counterparties? with similar (.+)", re.I), "cluster_counterparties"),
@@ -374,12 +382,12 @@ def _call_openai_planner(query: str) -> Optional[dict[str, Any]]:
     """Call OpenAI API to generate a plan."""
     try:
         import openai
+        from data_agent.config import OPENAI_API_KEY
 
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
+        if not OPENAI_API_KEY:
             return None
 
-        client = openai.OpenAI(api_key=api_key)
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
         response = client.chat.completions.create(  # type: ignore
             model="gpt-4",
@@ -424,12 +432,12 @@ def _call_anthropic_planner(query: str) -> Optional[dict[str, Any]]:
     """Call Anthropic API to generate a plan."""
     try:
         import anthropic
+        from data_agent.config import ANTHROPIC_API_KEY
 
-        api_key = os.getenv("ANTHROPIC_API_KEY")
-        if not api_key:
+        if not ANTHROPIC_API_KEY:
             return None
 
-        client = anthropic.Anthropic(api_key=api_key)
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
         # Convert OpenAI schema to Anthropic tool format
         tool = {
@@ -572,6 +580,15 @@ def plan(q: str, deterministic: bool = True) -> Plan:
                 sort=Sort(by=["sum_scheduled_quantity"], desc=True, limit=n),
             )
 
+        elif key == "top_states_volume":
+            n = int(m.group(1))
+            return Plan(
+                aggregate=Aggregate(
+                    groupby=["state_abb"], metrics=[{"col": "scheduled_quantity", "fn": "sum"}]
+                ),
+                sort=Sort(by=["sum_scheduled_quantity"], desc=True, limit=n),
+            )
+
         elif key == "deliveries_date_range":
             pipeline, start_date, end_date = m.group(1).strip(), m.group(2), m.group(3)
             import polars as pl
@@ -663,7 +680,7 @@ def plan(q: str, deterministic: bool = True) -> Plan:
                     k = int(m.group(2))
                 except ValueError:
                     k = 6
-            
+
             return Plan(
                 op="cluster",
                 op_args={
@@ -681,7 +698,7 @@ def plan(q: str, deterministic: bool = True) -> Plan:
                     k = int(m.group(2))
                 except ValueError:
                     k = 6
-            
+
             return Plan(
                 op="cluster",
                 op_args={

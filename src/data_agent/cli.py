@@ -79,10 +79,12 @@ def load(
 @app.command()
 def ask(
     q: str = typer.Argument(..., help="Natural language question about the dataset"),
-    planner: str = typer.Option(
-        "llm", "--planner", help="Planner type: deterministic or llm"
+    planner: str = typer.Option("llm", "--planner", help="Planner type: deterministic or llm"),
+    export: Optional[str] = typer.Option(
+        None,
+        "--export",
+        help="Export results to JSON file (use 'auto' for artifacts/outputs/{run_id}.json)",
     ),
-    export: Optional[str] = typer.Option(None, "--export", help="Export results to JSON file"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Show plan JSON without executing"),
     no_cache: bool = typer.Option(
         False, "--no-cache", help="Bypass cache and force fresh execution"
@@ -175,17 +177,17 @@ def ask(
         typer.echo(f"• Cache: {'hit' if answer.evidence['cache']['hit'] else 'miss'}")
 
         if export:
-            # Export results to JSON
-            # Convert plan to dict and serialize with orjson to handle Polars expressions
-            plan_dict = query_plan.model_dump()
-            export_data = {
-                "question": q,
-                "plan": orjson.loads(orjson.dumps(plan_dict, default=str)),
-                "answer": {"table": answer.table.to_dicts(), "evidence": answer.evidence},
-            }
-            with open(export, "w") as f:
-                json.dump(export_data, f, indent=2, default=str)
-            typer.echo(f"\nResults exported to: {export}")
+            # Export results to JSON using the export module
+            from data_agent.core.export import export_results
+
+            if export == "auto":
+                # Auto-generate filename in artifacts/outputs/
+                export_path = export_results(q, query_plan, answer)
+            else:
+                # Use custom path
+                export_path = export_results(q, query_plan, answer, export_path=export)
+
+            typer.echo(f"\nResults exported to: {export_path}")
 
         logger.info(
             "Ask command executed",
