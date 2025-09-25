@@ -79,7 +79,7 @@ def load(
 @app.command()
 def ask(
     q: str = typer.Argument(..., help="Natural language question about the dataset"),
-    planner: str = typer.Option("llm", "--planner", help="Planner type: deterministic or llm"),
+    planner: str = typer.Option("agent", "--planner", help="Planner type: agent (new DAG mode), deterministic, or llm (legacy)"),
     model: Optional[str] = typer.Option(
         None, "--model", help="LLM model to use: gpt-4.1, gpt-5, claude-sonnet, claude-opus"
     ),
@@ -92,118 +92,206 @@ def ask(
     no_cache: bool = typer.Option(
         False, "--no-cache", help="Bypass cache and force fresh execution"
     ),
+    fallback: bool = typer.Option(True, "--fallback/--no-fallback", help="Use deterministic fallbacks on LLM failure (agent mode only)"),
 ) -> None:
     """Ask a natural-language question about the dataset."""
     import json
 
-    from data_agent.cache import CacheManager
-    from data_agent.core.executor import run
-    from data_agent.core.planner import plan as create_plan
-    from data_agent.ingest.loader import load_dataset
-
-    typer.echo(f"Question: {q}")
-    typer.echo(f"Using planner: {planner}")
-    if model:
-        typer.echo(f"Using model: {model}")
+    # Ensure directories exist
+    config.ensure_directories()
 
     try:
-        # Create the plan
-        query_plan = create_plan(q, deterministic=(planner == "deterministic"), model=model)
+        if planner == "agent":
+            # New agent planner mode (DAG-based)
+            from data_agent.core.agent_planner import AgentPlanner, estimate_plan_complexity
+            from data_agent.core.llm_client import LLMClient
+            from data_agent.ingest.dictionary import load_data_dictionary
 
-        if dry_run:
-            # Show plan JSON and exit
-            plan_json = query_plan.model_dump()
-            typer.echo("\nPlan JSON:")
-            # Use custom serializer to handle Polars expressions
-            typer.echo(json.dumps(plan_json, indent=2, default=str))
-            logger.info("Dry run executed", extra={"question": q, "planner": planner})
-            return
+            typer.echo(f"Question: {q}")
+            typer.echo(f"Using planner: agent (DAG mode)")
+            if model:
+                typer.echo(f"Using model: {model}")
 
-        # Load the dataset - use real data if available, otherwise golden dataset
-        from data_agent.config import DATA_PATH
-
-        if DATA_PATH.exists():
-            lf = load_dataset(str(DATA_PATH), False)
-        else:
-            lf = load_dataset("examples/golden.parquet", False)
-
-        # Create cache manager (or None to bypass cache)
-        cache_manager = None if no_cache else CacheManager()
-
-        # Execute the plan
-        answer = run(lf, query_plan, cache_manager)
-
-        # Display results
-        typer.echo("\nAnswer:")
-        typer.echo(answer.table)
-
-        # Display evidence card
-        typer.echo("\nEvidence Card:")
-        typer.echo(f"• Rows out: {answer.evidence['rows_out']:,}")
-        typer.echo(f"• Columns: {', '.join(answer.evidence['columns'])}")
-
-        if answer.evidence["filters"]:
-            typer.echo("• Filters applied:")
-            for f in answer.evidence["filters"]:
-                typer.echo(f"  - {f['column']} {f['op']} {f['value']}")
-
-        if answer.evidence["aggregate"]:
-            agg = answer.evidence["aggregate"]
-            if agg["groupby"]:
-                typer.echo(f"• Grouped by: {', '.join(agg['groupby'])}")
-            typer.echo("• Metrics:")
-            for m in agg["metrics"]:
-                typer.echo(f"  - {m['fn']}({m['col']})")
-
-        if answer.evidence["sort"]:
-            sort = answer.evidence["sort"]
-            typer.echo(
-                f"• Sorted by: {', '.join(sort['by'])} ({'desc' if sort['desc'] else 'asc'})"
+            # Load data dictionary to get available columns
+            data_dict = load_data_dictionary()
+            available_columns = list(data_dict["schema"].keys())
+            
+            # Create LLM client if model specified
+            client = None
+            if model:
+                client = LLMClient(model=model)  # type: ignore[arg-type]
+            
+            # Create planner and generate plan
+            planner_instance = AgentPlanner(client)
+            plan_graph = planner_instance.plan(q, available_columns, fallback=fallback)
+            
+            if dry_run:
+                # Show detailed plan and estimates
+                estimates = estimate_plan_complexity(plan_graph)
+                typer.echo(f"\nPlan hash: {plan_graph.plan_hash()}")
+                
+                typer.echo("\nPlan Structure:")
+                typer.echo(f"  Topological order: {' → '.join(estimates['topological_order'])}")
+                typer.echo(f"  Estimated time: {estimates['estimated_time_seconds']:.1f}s")
+                typer.echo(f"  Estimated memory: {estimates['estimated_memory_mb']}MB")
+                if estimates['will_checkpoint']:
+                    typer.echo(f"  Will checkpoint: {', '.join(estimates['will_checkpoint'])}")
+                
+                typer.echo("\nPlan JSON:")
+                typer.echo(json.dumps(plan_graph.model_dump(), indent=2))
+                logger.info("Dry run executed (agent mode)", extra={"question": q, "plan_hash": plan_graph.plan_hash()})
+                return
+            
+            # TODO: Execute the plan using agent_executor when implemented
+            typer.echo(f"\nPlan hash: {plan_graph.plan_hash()}")
+            typer.echo(f"Steps: {len(plan_graph.nodes)}")
+            typer.echo("\nNote: Agent mode execution will be implemented in Task 4 (Agent Executor)")
+            typer.echo("For now, use --planner=deterministic or --planner=llm for execution.")
+            
+            # Export if requested
+            if export:
+                export_path = export
+                if export == "auto":
+                    import time
+                    timestamp = int(time.time())
+                    export_path = f"artifacts/outputs/{timestamp}_{plan_graph.plan_hash()[:8]}.json"
+                
+                export_data = {
+                    "question": q,
+                    "planner": "agent",
+                    "model": model,
+                    "plan": plan_graph.model_dump(),
+                    "plan_hash": plan_graph.plan_hash(),
+                    "note": "Execution pending - Task 4 implementation"
+                }
+                
+                with open(export_path, "w") as f:
+                    json.dump(export_data, f, indent=2)
+                typer.echo(f"\nPlan exported to: {export_path}")
+            
+            logger.info(
+                "Ask command executed (agent mode)",
+                extra={
+                    "question": q,
+                    "planner": planner,
+                    "plan_hash": plan_graph.plan_hash(),
+                },
             )
-            if sort["limit"]:
-                typer.echo(f"• Limited to: {sort['limit']} rows")
+            return
+        
+        else:
+            # Legacy planner modes (deterministic or llm)
+            from data_agent.cache import CacheManager
+            from data_agent.core.executor import run
+            from data_agent.core.planner import plan as create_plan
+            from data_agent.ingest.loader import load_dataset
 
-        if answer.evidence["operation"]:
-            op = answer.evidence["operation"]
-            typer.echo(f"• Operation: {op['type']}")
-            if op["parameters"]:
-                typer.echo("• Parameters:")
-                for key, value in op["parameters"].items():
-                    typer.echo(f"  - {key}: {value}")
-                if op["type"] == "changepoint":
-                    typer.echo(
-                        "  (Tip: Ask 'with min_confidence=0.5' or 'with penalty=5.0' "
-                        "to adjust parameters)",
-                    )
+            typer.echo(f"Question: {q}")
+            typer.echo(f"Using planner: {planner}")
+            if model:
+                typer.echo(f"Using model: {model}")
 
-        plan_time = answer.evidence["timings_ms"]["plan"]
-        collect_time = answer.evidence["timings_ms"]["collect"]
-        typer.echo(f"• Runtime: {plan_time:.1f}ms plan, {collect_time:.1f}ms collect")
-        typer.echo(f"• Cache: {'hit' if answer.evidence['cache']['hit'] else 'miss'}")
+            # Create the plan
+            query_plan = create_plan(q, deterministic=(planner == "deterministic"), model=model)
 
-        if export:
-            # Export results to JSON using the export module
-            from data_agent.core.export import export_results
+            if dry_run:
+                # Show plan JSON and exit
+                plan_json = query_plan.model_dump()
+                typer.echo("\nPlan JSON:")
+                # Use custom serializer to handle Polars expressions
+                typer.echo(json.dumps(plan_json, indent=2, default=str))
+                logger.info("Dry run executed", extra={"question": q, "planner": planner})
+                return
 
-            if export == "auto":
-                # Auto-generate filename in artifacts/outputs/
-                export_path = export_results(q, query_plan, answer)
+            # Load the dataset - use real data if available, otherwise golden dataset
+            from data_agent.config import DATA_PATH
+
+            if DATA_PATH.exists():
+                lf = load_dataset(str(DATA_PATH), False)
             else:
-                # Use custom path
-                export_path = export_results(q, query_plan, answer, export_path=export)
+                lf = load_dataset("examples/golden.parquet", False)
 
-            typer.echo(f"\nResults exported to: {export_path}")
+            # Create cache manager (or None to bypass cache)
+            cache_manager = None if no_cache else CacheManager()
 
-        logger.info(
-            "Ask command executed",
-            extra={
-                "question": q,
-                "planner": planner,
-                "export": export,
-                "rows_out": answer.evidence["rows_out"],
-            },
-        )
+            # Execute the plan
+            answer = run(lf, query_plan, cache_manager)
 
+            # Display results
+            typer.echo("\nAnswer:")
+            typer.echo(answer.table)
+
+            # Display evidence card
+            typer.echo("\nEvidence Card:")
+            typer.echo(f"• Rows out: {answer.evidence['rows_out']:,}")
+            typer.echo(f"• Columns: {', '.join(answer.evidence['columns'])}")
+
+            if answer.evidence["filters"]:
+                typer.echo("• Filters applied:")
+                for f in answer.evidence["filters"]:
+                    typer.echo(f"  - {f['column']} {f['op']} {f['value']}")
+
+            if answer.evidence["aggregate"]:
+                agg = answer.evidence["aggregate"]
+                if agg["groupby"]:
+                    typer.echo(f"• Grouped by: {', '.join(agg['groupby'])}")
+                typer.echo("• Metrics:")
+                for m in agg["metrics"]:
+                    typer.echo(f"  - {m['fn']}({m['col']})")
+
+            if answer.evidence["sort"]:
+                sort = answer.evidence["sort"]
+                typer.echo(
+                    f"• Sorted by: {', '.join(sort['by'])} ({'desc' if sort['desc'] else 'asc'})"
+                )
+                if sort["limit"]:
+                    typer.echo(f"• Limited to: {sort['limit']} rows")
+
+            if answer.evidence["operation"]:
+                op = answer.evidence["operation"]
+                typer.echo(f"• Operation: {op['type']}")
+                if op["parameters"]:
+                    typer.echo("• Parameters:")
+                    for key, value in op["parameters"].items():
+                        typer.echo(f"  - {key}: {value}")
+                    if op["type"] == "changepoint":
+                        typer.echo(
+                            "  (Tip: Ask 'with min_confidence=0.5' or 'with penalty=5.0' "
+                            "to adjust parameters)",
+                        )
+
+            plan_time = answer.evidence["timings_ms"]["plan"]
+            collect_time = answer.evidence["timings_ms"]["collect"]
+            typer.echo(f"• Runtime: {plan_time:.1f}ms plan, {collect_time:.1f}ms collect")
+            typer.echo(f"• Cache: {'hit' if answer.evidence['cache']['hit'] else 'miss'}")
+
+            if export:
+                # Export results to JSON using the export module
+                from data_agent.core.export import export_results
+
+                if export == "auto":
+                    # Auto-generate filename in artifacts/outputs/
+                    export_path = export_results(q, query_plan, answer)
+                else:
+                    # Use custom path
+                    export_path = export_results(q, query_plan, answer, export_path=export)
+
+                typer.echo(f"\nResults exported to: {export_path}")
+
+            logger.info(
+                "Ask command executed",
+                extra={
+                    "question": q,
+                    "planner": planner,
+                    "export": export,
+                    "rows_out": answer.evidence["rows_out"],
+                },
+            )
+
+    except FileNotFoundError as e:
+        typer.echo(f"Error: {e}", err=True)
+        typer.echo("Make sure to run 'agent load' first to set up the dataset.")
+        raise typer.Exit(1) from e
     except NotImplementedError as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(1) from e
@@ -570,6 +658,125 @@ def cluster(
             "Clustering failed", extra={"error": str(e), "entity_type": entity_type, "k": k}
         )
         raise typer.Exit(1) from e
+
+
+@app.command()
+def plan(
+    query: str = typer.Argument(..., help="Natural language question to plan"),
+    model: Optional[str] = typer.Option(
+        None, "--model", help="LLM model to use: gpt-4.1, gpt-5, claude-sonnet, claude-opus"
+    ),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show plan and estimates without executing"),
+    export: Optional[str] = typer.Option(None, "--export", help="Export plan JSON to file"),
+    fallback: bool = typer.Option(True, "--fallback/--no-fallback", help="Use deterministic fallbacks on LLM failure"),
+) -> None:
+    """Plan a query using LLM and show the resulting DAG."""
+    import json
+    from data_agent.core.agent_planner import AgentPlanner, estimate_plan_complexity
+    from data_agent.core.llm_client import LLMClient
+    from data_agent.ingest.dictionary import load_data_dictionary
+
+    try:
+        # Load data dictionary to get available columns
+        data_dict = load_data_dictionary()
+        available_columns = list(data_dict["schema"].keys())
+        
+        # Create LLM client if model specified
+        client = None
+        if model:
+            client = LLMClient(model=model)  # type: ignore[arg-type]
+        
+        # Create planner and generate plan
+        planner = AgentPlanner(client)
+        plan_graph = planner.plan(query, available_columns, fallback=fallback)
+        
+        # Show plan details
+        typer.echo(f"Generated plan for: {query}")
+        typer.echo(f"Plan hash: {plan_graph.plan_hash()}")
+        typer.echo(f"Steps: {len(plan_graph.nodes)}")
+        typer.echo(f"Edges: {len(plan_graph.edges)}")
+        
+        if dry_run:
+            # Show detailed plan and estimates
+            estimates = estimate_plan_complexity(plan_graph)
+            typer.echo("\nPlan Structure:")
+            typer.echo(f"  Topological order: {' → '.join(estimates['topological_order'])}")
+            typer.echo(f"  Estimated time: {estimates['estimated_time_seconds']:.1f}s")
+            typer.echo(f"  Estimated memory: {estimates['estimated_memory_mb']}MB")
+            if estimates['will_checkpoint']:
+                typer.echo(f"  Will checkpoint: {', '.join(estimates['will_checkpoint'])}")
+            
+            typer.echo("\nSteps:")
+            for step in plan_graph.nodes:
+                typer.echo(f"  {step.id}: {step.op} {step.params}")
+            
+            typer.echo("\nEdges:")
+            for edge in plan_graph.edges:
+                typer.echo(f"  {edge.src} → {edge.dst}")
+        
+        # Export if requested
+        if export:
+            plan_data = plan_graph.model_dump()
+            with open(export, 'w') as f:
+                json.dump(plan_data, f, indent=2)
+            typer.echo(f"\nPlan exported to: {export}")
+        
+        logger.info("Plan command executed", extra={
+            "query": query, "model": model, "dry_run": dry_run,
+            "plan_hash": plan_graph.plan_hash()
+        })
+        
+    except FileNotFoundError:
+        typer.echo("Error: Data dictionary not found. Run 'agent load' first.", err=True)
+        raise typer.Exit(1)
+    except Exception as e:
+        typer.echo(f"Planning failed: {e}", err=True)
+        logger.error("Plan command failed", extra={"error": str(e), "query": query})
+        raise typer.Exit(1)
+
+
+@app.command()
+def run(
+    plan_file: str = typer.Option(..., "--plan", help="Path to plan JSON file"),
+    export: Optional[str] = typer.Option(
+        None, "--export", help="Export results to JSON file (use 'auto' for artifacts/outputs/{hash}.json)"
+    ),
+    no_cache: bool = typer.Option(False, "--no-cache", help="Bypass cache and force fresh execution"),
+) -> None:
+    """Execute a pre-generated plan from JSON file."""
+    import json
+    from pathlib import Path
+    from data_agent.core.agent_schema import PlanGraph
+    from data_agent.ingest.loader import load_dataset
+
+    try:
+        # Load and validate plan
+        plan_path = Path(plan_file)
+        if not plan_path.exists():
+            typer.echo(f"Error: Plan file not found: {plan_file}", err=True)
+            raise typer.Exit(1)
+        
+        with open(plan_path) as f:
+            plan_data = json.load(f)
+        
+        plan_graph = PlanGraph(**plan_data)
+        
+        # Load dataset
+        lf = load_dataset()
+        
+        # TODO: Execute the plan using agent_executor when implemented
+        typer.echo(f"Plan loaded: {plan_graph.plan_hash()}")
+        typer.echo(f"Steps: {len(plan_graph.nodes)}")
+        typer.echo("Note: Plan execution will be implemented in Task 4 (Agent Executor)")
+        
+        logger.info("Run command executed", extra={
+            "plan_file": plan_file, "plan_hash": plan_graph.plan_hash()
+        })
+        
+    except Exception as e:
+        typer.echo(f"Execution failed: {e}", err=True)
+        logger.error("Run command failed", extra={"error": str(e), "plan_file": plan_file})
+        raise typer.Exit(1)
 
 
 @app.command()
