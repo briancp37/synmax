@@ -1,0 +1,353 @@
+{
+  "plan": {
+    "nodes": [
+      {
+        "id": "a",
+        "op": "aggregate",
+        "params": {
+          "groupby": [
+            "pipeline_name"
+          ],
+          "metrics": [
+            {
+              "col": "scheduled_quantity",
+              "fn": "sum"
+            }
+          ]
+        },
+        "engine": "polars",
+        "materialize": null
+      },
+      {
+        "id": "r",
+        "op": "rank",
+        "params": {
+          "by": [
+            "sum_scheduled_quantity"
+          ],
+          "descending": true
+        },
+        "engine": "polars",
+        "materialize": null
+      },
+      {
+        "id": "l",
+        "op": "limit",
+        "params": {
+          "n": 10
+        },
+        "engine": "polars",
+        "materialize": null
+      },
+      {
+        "id": "e",
+        "op": "evidence_collect",
+        "params": {},
+        "engine": "polars",
+        "materialize": null
+      }
+    ],
+    "edges": [
+      {
+        "src": "raw",
+        "dst": "a"
+      },
+      {
+        "src": "a",
+        "dst": "r"
+      },
+      {
+        "src": "r",
+        "dst": "l"
+      },
+      {
+        "src": "l",
+        "dst": "e"
+      }
+    ],
+    "inputs": [
+      "raw"
+    ],
+    "outputs": [
+      "l"
+    ]
+  },
+  "plan_hash": "be91829807a60a5d9f0c2bd89f3da50666c1c0e34df9a480e705f589b57e3b1f",
+  "result": {
+    "rows": 10,
+    "columns": 3,
+    "data": [
+      {
+        "pipeline_name": "Algonquin Gas Transmission, LLC",
+        "sum_scheduled_quantity": 6178300913.0,
+        "rank_sum_scheduled_quantity": 27.0
+      },
+      {
+        "pipeline_name": "Garden Banks Gas Pipeline, LLC",
+        "sum_scheduled_quantity": 249484190.0,
+        "rank_sum_scheduled_quantity": 114.0
+      },
+      {
+        "pipeline_name": "Sabine Pipe Line LLC",
+        "sum_scheduled_quantity": 2571144297.0,
+        "rank_sum_scheduled_quantity": 55.0
+      },
+      {
+        "pipeline_name": "Maritimes & Northeast Pipeline, L.L.C.",
+        "sum_scheduled_quantity": 849291264.0,
+        "rank_sum_scheduled_quantity": 84.0
+      },
+      {
+        "pipeline_name": "Generation Pipeline",
+        "sum_scheduled_quantity": 294422950.0,
+        "rank_sum_scheduled_quantity": 106.0
+      },
+      {
+        "pipeline_name": "Sabal Trail",
+        "sum_scheduled_quantity": 2111182499.0,
+        "rank_sum_scheduled_quantity": 61.0
+      },
+      {
+        "pipeline_name": "ANR Storage Company",
+        "sum_scheduled_quantity": 279400342.0,
+        "rank_sum_scheduled_quantity": 110.0
+      },
+      {
+        "pipeline_name": "Rager Mountain",
+        "sum_scheduled_quantity": 11076093.0,
+        "rank_sum_scheduled_quantity": 160.0
+      },
+      {
+        "pipeline_name": "Northern Natural Gas Company",
+        "sum_scheduled_quantity": 34131129317.0,
+        "rank_sum_scheduled_quantity": 6.0
+      },
+      {
+        "pipeline_name": "Sierrita Gas Pipeline",
+        "sum_scheduled_quantity": 63551003.0,
+        "rank_sum_scheduled_quantity": 145.0
+      }
+    ]
+  },
+  "evidence": {
+    "plan": {
+      "plan_hash": "be91829807a60a5d9f0c2bd89f3da50666c1c0e34df9a480e705f589b57e3b1f",
+      "nodes": [
+        {
+          "id": "a",
+          "op": "aggregate",
+          "params": {
+            "groupby": [
+              "pipeline_name"
+            ],
+            "metrics": [
+              {
+                "col": "scheduled_quantity",
+                "fn": "sum"
+              }
+            ]
+          },
+          "engine": "polars",
+          "materialize": null
+        },
+        {
+          "id": "r",
+          "op": "rank",
+          "params": {
+            "by": [
+              "sum_scheduled_quantity"
+            ],
+            "descending": true
+          },
+          "engine": "polars",
+          "materialize": null
+        },
+        {
+          "id": "l",
+          "op": "limit",
+          "params": {
+            "n": 10
+          },
+          "engine": "polars",
+          "materialize": null
+        },
+        {
+          "id": "e",
+          "op": "evidence_collect",
+          "params": {},
+          "engine": "polars",
+          "materialize": null
+        }
+      ],
+      "edges": [
+        {
+          "src": "raw",
+          "dst": "a"
+        },
+        {
+          "src": "a",
+          "dst": "r"
+        },
+        {
+          "src": "r",
+          "dst": "l"
+        },
+        {
+          "src": "l",
+          "dst": "e"
+        }
+      ],
+      "inputs": [
+        "raw"
+      ],
+      "outputs": [
+        "l"
+      ]
+    },
+    "steps": [
+      {
+        "node_id": "a",
+        "params": {
+          "groupby": [
+            "pipeline_name"
+          ],
+          "metrics": [
+            {
+              "col": "scheduled_quantity",
+              "fn": "sum"
+            }
+          ]
+        },
+        "input_stats": {
+          "handles": 1,
+          "total_rows": 23854855,
+          "total_bytes": 159013112,
+          "total_columns": 13
+        },
+        "output_stats": {
+          "rows": 169,
+          "columns": 2,
+          "bytes": 5962,
+          "null_counts": {
+            "pipeline_name": 0,
+            "sum_scheduled_quantity": 0
+          }
+        },
+        "timings": {
+          "load": 7.667113095521927e-06,
+          "execute": 0.00011812499724328518,
+          "collect": 0.49575649993494153,
+          "materialize": 5.4042087867856026e-05,
+          "total": 0.4959363341331482
+        },
+        "snippet": "import polars as pl\n# Step: a (StepType.AGGREGATE)\nlf = pl.scan_parquet(\"/Users/brianpennington/git/synmax/data/pipeline_data.parquet\")\nresult = lf.group_by(['pipeline_name']).agg([pl.col('scheduled_quantity').sum().alias('sum_scheduled_quantity')])\nprint(result.collect())",
+        "checkpoint_path": null
+      },
+      {
+        "node_id": "r",
+        "params": {
+          "by": [
+            "sum_scheduled_quantity"
+          ],
+          "descending": true
+        },
+        "input_stats": {
+          "handles": 1,
+          "total_rows": 0,
+          "total_bytes": 0,
+          "total_columns": 0
+        },
+        "output_stats": {
+          "rows": 169,
+          "columns": 3,
+          "bytes": 7314,
+          "null_counts": {
+            "pipeline_name": 0,
+            "sum_scheduled_quantity": 0,
+            "rank_sum_scheduled_quantity": 0
+          }
+        },
+        "timings": {
+          "load": 2.375105395913124e-06,
+          "execute": 0.00036099995486438274,
+          "collect": 0.331807459006086,
+          "materialize": 3.954092971980572e-05,
+          "total": 0.3322103749960661
+        },
+        "snippet": "import polars as pl\n# Step: r (StepType.RANK)\nlf = pl.scan_parquet('input.parquet')\n# Operation: StepType.RANK with params: {'by': ['sum_scheduled_quantity'], 'descending': True}\nresult = lf  # Placeholder\nprint(result.collect())",
+        "checkpoint_path": null
+      },
+      {
+        "node_id": "l",
+        "params": {
+          "n": 10
+        },
+        "input_stats": {
+          "handles": 1,
+          "total_rows": 0,
+          "total_bytes": 0,
+          "total_columns": 0
+        },
+        "output_stats": {
+          "rows": 10,
+          "columns": 3,
+          "bytes": 432,
+          "null_counts": {
+            "pipeline_name": 0,
+            "sum_scheduled_quantity": 0,
+            "rank_sum_scheduled_quantity": 0
+          }
+        },
+        "timings": {
+          "load": 1.8330756574869156e-06,
+          "execute": 0.00023362506181001663,
+          "collect": 0.26645908295176923,
+          "materialize": 2.1249987185001373e-05,
+          "total": 0.26671579107642174
+        },
+        "snippet": "import polars as pl\n# Step: l (StepType.LIMIT)\nlf = pl.scan_parquet('input.parquet')\n# Operation: StepType.LIMIT with params: {'n': 10}\nresult = lf  # Placeholder\nprint(result.collect())",
+        "checkpoint_path": null
+      },
+      {
+        "node_id": "e",
+        "params": {},
+        "input_stats": {
+          "handles": 1,
+          "total_rows": 0,
+          "total_bytes": 0,
+          "total_columns": 0
+        },
+        "output_stats": {
+          "rows": 10,
+          "columns": 3,
+          "bytes": 432,
+          "null_counts": {
+            "pipeline_name": 0,
+            "sum_scheduled_quantity": 0,
+            "rank_sum_scheduled_quantity": 0
+          }
+        },
+        "timings": {
+          "load": 2.5830231606960297e-06,
+          "execute": 0.24910641694441438,
+          "collect": 0.0006527500227093697,
+          "materialize": 2.3124972358345985e-05,
+          "total": 0.2497848749626428
+        },
+        "snippet": "import polars as pl\n# Step: e (StepType.EVIDENCE_COLLECT)\nlf = pl.scan_parquet('input.parquet')\n# Operation: StepType.EVIDENCE_COLLECT with params: {}\nresult = lf  # Placeholder\nprint(result.collect())",
+        "checkpoint_path": null
+      }
+    ],
+    "final_result": {
+      "rows": 10,
+      "columns": 3,
+      "column_names": [
+        "pipeline_name",
+        "sum_scheduled_quantity",
+        "rank_sum_scheduled_quantity"
+      ]
+    },
+    "total_steps": 4,
+    "total_time": 1.3446473751682788
+  }
+}
