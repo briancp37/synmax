@@ -954,7 +954,10 @@ def cache(
 
         logger.info(
             "Garbage collection completed",
-            extra={"cache_files_removed": cache_gc_stats, "handle_files_removed": handle_files_removed},
+            extra={
+                "cache_files_removed": cache_gc_stats,
+                "handle_files_removed": handle_files_removed,
+            },
         )
     elif stats:
         # Show stats for both cache and step handles
