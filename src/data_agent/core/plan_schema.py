@@ -44,9 +44,7 @@ class Plan(BaseModel):
     resample: Resample | None = None
     aggregate: Aggregate | None = None
     sort: Sort | None = None
-    op: Literal["metric_compute", "changepoint", "cluster", "rules_scan", "causal", None] | None = (
-        None
-    )
+    op: Literal["metric_compute", "changepoint", "cluster", "rules_scan", None] | None = None
     op_args: dict[str, Any] = Field(default_factory=dict)
     evidence: bool = True
     format: Literal["table", "json"] = "table"

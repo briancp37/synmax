@@ -1,13 +1,11 @@
 """Deterministic template-based query planner with LLM support."""
 
 import json
+import os
 import re
-from typing import TYPE_CHECKING, Any, Optional
+from typing import Any, Optional
 
 from .plan_schema import Aggregate, Filter, Plan, Sort
-
-if TYPE_CHECKING:
-    from .llm_client import LLMClient
 
 # Pattern definitions for deterministic planning
 _PATTERNS = [
@@ -384,7 +382,6 @@ def _call_openai_planner(query: str) -> Optional[dict[str, Any]]:
     """Call OpenAI API to generate a plan."""
     try:
         import openai
-
         from data_agent.config import OPENAI_API_KEY
 
         if not OPENAI_API_KEY:
@@ -435,7 +432,6 @@ def _call_anthropic_planner(query: str) -> Optional[dict[str, Any]]:
     """Call Anthropic API to generate a plan."""
     try:
         import anthropic
-
         from data_agent.config import ANTHROPIC_API_KEY
 
         if not ANTHROPIC_API_KEY:
@@ -493,108 +489,40 @@ Generate a query plan for: {query}""",
     return None
 
 
-def _call_llm_planner(query: str, llm_client: "LLMClient") -> Optional[dict[str, Any]]:
-    """Call LLM API to generate a plan using the unified LLMClient."""
-    try:
-        system_content = """You are a data analyst specializing in gas pipeline data. 
-Generate structured query plans for natural language questions about pipeline data.
+def _llm_plan(query: str) -> Optional[Plan]:
+    """Generate a plan using LLM (OpenAI or Anthropic)."""
+    # Try OpenAI first
+    plan_data = _call_openai_planner(query)
 
-Available columns:
-- pipeline_name: Name of the pipeline
-- loc_name: Location name  
-- connecting_pipeline: Connected pipeline name
-- connecting_entity: Connected entity name
-- rec_del_sign: Receipt (+1) or delivery (-1) indicator
-- category_short: Category (e.g., Interconnect, LDC, Industrial)
-- country_name: Country name
-- state_abb: Two-letter state abbreviation
-- county_name: County name
-- latitude, longitude: Geographic coordinates
-- eff_gas_day: Effective gas day (date)
-- scheduled_quantity: Daily scheduled flow quantity
+    # Validate and normalize OpenAI response
+    if plan_data is not None and _validate_plan_json(plan_data):
+        try:
+            normalized_data = _normalize_plan_data(plan_data)
+            return Plan(**normalized_data)
+        except Exception:
+            pass  # Fall through to try Anthropic
 
-For changepoint analysis, pay attention to parameter specifications in the query:
-- "with min_confidence=X" → set min_confidence to X
-- "with penalty=X" → set penalty to X  
-- "with min_size=X" → set min_size to X
-- Otherwise use defaults: min_confidence=0.7, penalty=10.0, min_size=10
+    # If OpenAI fails or returns invalid data, try Anthropic
+    plan_data = _call_anthropic_planner(query)
 
-Use the generate_query_plan function to create a structured plan."""
+    # Validate and normalize Anthropic response
+    if plan_data is not None and _validate_plan_json(plan_data):
+        try:
+            normalized_data = _normalize_plan_data(plan_data)
+            return Plan(**normalized_data)
+        except Exception:
+            pass
 
-        messages = [
-            {"role": "system", "content": system_content},
-            {"role": "user", "content": f"Generate a query plan for: {query}"},
-        ]
-
-        # Prepare tools based on provider
-        if llm_client.provider == "openai":
-            tools = [{"type": "function", "function": PLAN_FUNCTION_SCHEMA}]
-            tool_choice = {"type": "function", "function": {"name": "generate_query_plan"}}
-
-            response = llm_client.call(messages=messages, tools=tools, tool_choice=tool_choice)
-
-            if response.get("tool_calls"):
-                tool_call = response["tool_calls"][0]
-                if hasattr(tool_call, "function") and tool_call.function:
-                    return json.loads(tool_call.function.arguments)
-
-        elif llm_client.provider == "anthropic":
-            # Convert OpenAI schema to Anthropic tool format
-            tool = {
-                "name": "generate_query_plan",
-                "description": "Generate a structured query plan for gas pipeline data analysis",
-                "input_schema": PLAN_FUNCTION_SCHEMA["parameters"],
-            }
-
-            response = llm_client.call(messages=messages, tools=[tool], max_tokens=1000)
-
-            # Anthropic tool calls are handled differently - check the response content
-            # For now, we'll return None and let it fall back to deterministic planning
-            # TODO: Implement proper Anthropic tool call parsing
-            return None
-
-    except Exception:
-        pass
+    # Both failed
     return None
 
 
-def _llm_plan(query: str, model: Optional[str] = None) -> Optional[Plan]:
-    """Generate a plan using LLM (OpenAI or Anthropic)."""
-    from .llm_client import LLMClient, get_default_llm_client
-
-    try:
-        # Use specified model or default from config
-        if model:
-            if model not in ["gpt-4.1", "gpt-5", "claude-sonnet", "claude-opus"]:
-                raise ValueError(f"Unsupported model: {model}")
-            llm_client = LLMClient(model=model)  # type: ignore[arg-type]
-        else:
-            llm_client = get_default_llm_client()
-
-        plan_data = _call_llm_planner(query, llm_client)
-
-        # Validate and normalize response
-        if plan_data is not None and _validate_plan_json(plan_data):
-            try:
-                normalized_data = _normalize_plan_data(plan_data)
-                return Plan(**normalized_data)
-            except Exception:
-                pass
-
-        return None
-
-    except Exception:
-        # Fallback to None if any error occurs
-        return None
-
-
-def plan(q: str, deterministic: bool = True, model: Optional[str] = None) -> Plan:
+def plan(q: str, deterministic: bool = True) -> Plan:
     """Create a query plan from natural language input.
 
     Args:
         q: Natural language query string
         deterministic: If True, use template-based planning; if False, use LLM planning
-        model: Optional LLM model name to use for planning (overrides default)
 
     Returns:
         Plan object representing the query execution plan
@@ -604,7 +532,7 @@ def plan(q: str, deterministic: bool = True, model: Optional[str] = None) -> Pla
     """
     if not deterministic:
         # Try LLM-based planning first
-        llm_result = _llm_plan(q, model)
+        llm_result = _llm_plan(q)
         if llm_result is not None:
             return llm_result
         # Fallback to deterministic if LLM fails
