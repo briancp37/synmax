@@ -112,6 +112,200 @@ poetry run python -m data_agent.cli load --path /path/to/your/dataset.parquet
 
 ## Usage
 
+### Agent Mode (DAG)
+
+The Data Agent includes a powerful **DAG-based planning mode** that breaks down complex queries into optimized execution graphs. This mode provides fine-grained control over model selection, execution strategies, and caching behavior.
+
+#### Model Selection
+
+Choose from multiple LLM providers and models:
+
+```bash
+# OpenAI models
+poetry run python -m data_agent.cli ask "your question" --model gpt-4.1
+poetry run python -m data_agent.cli ask "your question" --model gpt-5
+
+# Anthropic models  
+poetry run python -m data_agent.cli ask "your question" --model claude-sonnet
+poetry run python -m data_agent.cli ask "your question" --model claude-opus
+```
+
+If no model is specified, the agent uses deterministic fallbacks for supported query patterns.
+
+#### Dry-Run Mode
+
+Preview query plans without execution to understand the analysis strategy:
+
+```bash
+# Show plan structure and complexity estimates
+poetry run python -m data_agent.cli ask "cluster counterparties by volume patterns" --dry-run
+
+# Plan-only command with detailed breakdown
+poetry run python -m data_agent.cli plan "detect anomalies in Texas pipelines" --dry-run
+```
+
+**Dry-run output includes**:
+- Execution DAG structure and topological order
+- Estimated execution time and memory usage
+- Checkpoint strategies for large operations
+- Step-by-step breakdown with parameters
+
+#### Materialization Strategies
+
+Control when intermediate results are materialized to disk:
+
+```bash
+# Materialize all intermediate steps (safest, uses more disk)
+poetry run python -m data_agent.cli ask "complex multi-step analysis" --materialize all
+
+# Materialize only heavy operations like clustering (default)
+poetry run python -m data_agent.cli ask "standard analysis" --materialize heavy
+
+# Never materialize (fastest, uses more memory)
+poetry run python -m data_agent.cli ask "simple query" --materialize never
+```
+
+**Materialization strategies**:
+- `all`: Every step checkpointed to `artifacts/tmp/`
+- `heavy`: Only memory-intensive operations (clustering, changepoint detection)
+- `never`: Keep all data in memory (faster but may cause OOM on large datasets)
+
+#### Caching Policy
+
+Fine-tune caching behavior for performance optimization:
+
+```bash
+# Custom cache TTL (time-to-live) in hours
+poetry run python -m data_agent.cli ask "your question" --cache-ttl 24
+
+# Custom cache size limit in GB
+poetry run python -m data_agent.cli ask "your question" --cache-max-gb 5.0
+
+# Bypass cache entirely for fresh results
+poetry run python -m data_agent.cli ask "your question" --no-cache
+
+# Check cache status
+poetry run python -m data_agent.cli cache --stats
+```
+
+**Cache optimization**:
+- Plans with identical structure share cached results
+- Cache keys based on plan hash + input data hash
+- Automatic cleanup when size limits exceeded
+- Persistent across sessions (stored in `artifacts/cache/`)
+
+#### Plan Execution Workflow
+
+The agent mode supports a three-step workflow for complex analyses:
+
+**1. Plan Generation**
+```bash
+# Generate and export a plan
+poetry run python -m data_agent.cli plan "detect regime shifts in 2022 gas flows" --export my_plan.json --dry-run
+```
+
+**2. Plan Review & Modification**
+```bash
+# Review the generated plan structure
+cat my_plan.json | jq '.nodes[] | {id, op, params}'
+```
+
+**3. Plan Execution**
+```bash
+# Execute the plan with custom settings
+poetry run python -m data_agent.cli run --plan my_plan.json --materialize heavy --export results.json
+```
+
+#### Copy-Paste Plan Example
+
+Here's a complete plan JSON for detecting significant flow changes that you can save and execute directly:
+
+```json
+{
+  "nodes": [
+    {
+      "id": "f1",
+      "op": "filter",
+      "params": {
+        "column": "eff_gas_day",
+        "op": "between",
+        "value": ["2022-01-01", "2022-12-31"]
+      }
+    },
+    {
+      "id": "f2", 
+      "op": "filter",
+      "params": {
+        "column": "state_abb",
+        "op": "=",
+        "value": "TX"
+      }
+    },
+    {
+      "id": "a",
+      "op": "aggregate",
+      "params": {
+        "groupby": ["pipeline_name", "eff_gas_day"],
+        "metrics": [
+          {
+            "col": "scheduled_quantity",
+            "fn": "sum"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c",
+      "op": "changepoint",
+      "params": {
+        "column": "sum_scheduled_quantity",
+        "method": "pelt",
+        "min_size": 7,
+        "penalty": 2.0,
+        "min_confidence": 0.7,
+        "groupby": ["pipeline_name"]
+      }
+    },
+    {
+      "id": "r",
+      "op": "rank",
+      "params": {
+        "by": ["change_magnitude"],
+        "descending": true
+      }
+    },
+    {
+      "id": "l",
+      "op": "limit",
+      "params": {
+        "n": 10
+      }
+    },
+    {
+      "id": "e",
+      "op": "evidence_collect",
+      "params": {}
+    }
+  ],
+  "edges": [
+    {"src": "raw", "dst": "f1"},
+    {"src": "f1", "dst": "f2"},
+    {"src": "f2", "dst": "a"},
+    {"src": "a", "dst": "c"},
+    {"src": "c", "dst": "r"},
+    {"src": "r", "dst": "l"},
+    {"src": "l", "dst": "e"}
+  ],
+  "inputs": ["raw"],
+  "outputs": ["l"]
+}
+```
+
+**To use this plan**:
+1. Save as `texas_changepoints.json`
+2. Execute: `poetry run python -m data_agent.cli run --plan texas_changepoints.json --export results.json`
+3. View results in `results.json` or check `artifacts/outputs/` for auto-generated files
+
 ### Basic Commands
 
 The agent provides several CLI commands:
