@@ -320,6 +320,15 @@ Create a DAG plan that efficiently answers the user's query."""
             logger.info("Using time_series_analysis macro for fallback")
             return create_macro_plan("time_series_analysis")
 
+        # Variability patterns (check before general top-k)
+        if any(word in query_lower for word in ["variability", "variance", "variation", "volatile", "fluctuation"]):
+            # Extract number if present
+            import re
+            numbers = re.findall(r"\d+", query)
+            k = int(numbers[0]) if numbers else 10
+            logger.info(f"Using variability ranking macro for fallback with k={k}")
+            return create_macro_plan("top_k_ranking", k=k, metric_fn="std", descending=True)
+
         # Top-k patterns
         if any(word in query_lower for word in ["top", "highest", "largest", "biggest"]):
             # Extract number if present
@@ -329,6 +338,21 @@ Create a DAG plan that efficiently answers the user's query."""
             k = int(numbers[0]) if numbers else 10
             logger.info(f"Using top_k_ranking macro for fallback with k={k}")
             return create_macro_plan("top_k_ranking", k=k)
+
+        # State-based aggregation patterns
+        if any(word in query_lower for word in ["by state", "per state", "state"]) and any(word in query_lower for word in ["average", "avg", "mean"]):
+            logger.info("Using state-based average aggregation for fallback")
+            return create_macro_plan("simple_aggregation", 
+                                   groupby_cols=["state_abb"], 
+                                   metric_fn="avg", 
+                                   limit=100)
+        
+        # Average patterns (general)
+        if any(word in query_lower for word in ["average", "avg", "mean"]):
+            logger.info("Using average aggregation macro for fallback")
+            return create_macro_plan("simple_aggregation", 
+                                   metric_fn="avg", 
+                                   limit=100)
 
         # Simple aggregation patterns
         if any(word in query_lower for word in ["sum", "total", "aggregate"]):
