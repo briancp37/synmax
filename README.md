@@ -22,6 +22,7 @@ The Data Agent provides:
 - **Natural Language Understanding**: Converts questions into executable analysis plans
 - **Query Planning & Execution**: Optimized execution over large datasets using Polars/DuckDB
 - **Evidence Generation**: Returns concise answers plus supporting evidence (methods used, selected columns, filters)
+- **LLM Answer Generation**: Automatically generates prose summaries of query results using OpenAI/Anthropic models
 - **Deterministic & Analytic Queries**: Handles both simple counts and complex pattern analysis
 
 ### Analysis Types
@@ -139,6 +140,9 @@ poetry run python -m data_agent.cli ask "top states by gas volume" --export auto
 # Dry run (show plan without execution)
 poetry run python -m data_agent.cli ask "monthly trends" --dry-run
 
+# Suppress LLM-generated answer (show only data)
+poetry run python -m data_agent.cli ask "top 5 pipelines" --no-answer
+
 # Bypass cache
 poetry run python -m data_agent.cli ask "recent anomalies" --no-cache
 ```
@@ -218,7 +222,15 @@ poetry run python -m data_agent.cli ask "total gas deliveries in Texas for 2022"
 
 **Output**:
 ```
-Answer:
+Plan hash: abc123...
+Steps executed: 3
+Final result: 1 rows, 1 columns
+
+Evidence:
+  Plan executed in 3 steps
+  Detailed evidence: artifacts/outputs/abc123...json
+
+Results:
 ┌─────────────────────┐
 │ sum_scheduled_qty   │
 │ ---                 │
@@ -227,15 +239,8 @@ Answer:
 │ 1234567890.0       │
 └─────────────────────┘
 
-Evidence Card:
-• Rows out: 1
-• Columns: sum_scheduled_qty
-• Filters applied:
-  - state_abb = TX
-  - eff_gas_day between 2022-01-01 and 2022-12-31
-• Metrics:
-  - sum(scheduled_quantity)
-• Runtime: 45.2ms plan, 123.8ms collect
+Answer:
+The analysis shows total gas deliveries in Texas for 2022 reached approximately 1.23 billion units. This aggregation was performed across all pipeline data filtered by state (TX) and the specified date range (2022-01-01 to 2022-12-31).
 ```
 
 ### Pattern Recognition
@@ -245,7 +250,15 @@ poetry run python -m data_agent.cli ask "cluster counterparties by their depende
 
 **Output**:
 ```
-Answer:
+Plan hash: def456...
+Steps executed: 5
+Final result: 2 rows, 4 columns
+
+Evidence:
+  Plan executed in 5 steps
+  Detailed evidence: artifacts/outputs/def456...json
+
+Results:
 ┌─────────────────┬─────────────┬──────────────────┬─────────────────┐
 │ counterparty    │ cluster_id  │ cluster_name     │ concentration   │
 │ ---             │ ---         │ ---              │ ---             │
@@ -255,14 +268,8 @@ Answer:
 │ Power Plant B   │ 1          │ Diversified      │ 0.32           │
 └─────────────────┴─────────────┴──────────────────┴─────────────────┘
 
-Evidence Card:
-• Operation: cluster
-• Parameters:
-  - entity_type: counterparty
-  - k: 6
-  - features: dependency_concentration, volume_variance
-• Silhouette Score: 0.67
-• Runtime: 234.5ms plan, 1456.2ms collect
+Answer:
+The clustering analysis identified two distinct counterparty groups based on dependency concentration. Utility Corp A shows high dependence with 85% concentration, while Power Plant B demonstrates a diversified approach with only 32% concentration. The analysis achieved a silhouette score of 0.67, indicating well-separated clusters.
 ```
 
 ### Anomaly Detection
