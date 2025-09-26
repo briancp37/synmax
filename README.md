@@ -127,6 +127,12 @@ poetry run python -m data_agent.cli load --path data/pipeline_data.parquet
 ```
 
 #### `ask` - Natural Language Queries
+
+All queries return results in the following order:
+1. **Evidence**: Summary of execution steps and methodology
+2. **Results**: Data table with query results
+3. **Answer**: LLM-generated prose explanation (unless `--no-answer` is used)
+
 ```bash
 # Basic query
 poetry run python -m data_agent.cli ask "total deliveries for ANR Pipeline in January 2022"
@@ -210,6 +216,7 @@ poetry run python -m data_agent.cli ask "your question" --export results.json
 Exported files include:
 - Original question and generated plan
 - Complete results table
+- LLM-generated answer text
 - Evidence card with methodology details
 - Execution metadata (timing, cache status, etc.)
 
@@ -279,7 +286,15 @@ poetry run python -m data_agent.cli ask "detect flow anomalies in Michigan pipel
 
 **Output**:
 ```
-Answer:
+Plan hash: ghi789...
+Steps executed: 6
+Final result: 2 rows, 4 columns
+
+Evidence:
+  Plan executed in 6 steps
+  Detailed evidence: artifacts/outputs/ghi789...json
+
+Results:
 ┌──────────────┬─────────────┬──────────────┬─────────────┐
 │ eff_gas_day  │ pipeline    │ anomaly_type │ confidence  │
 │ ---          │ ---         │ ---          │ ---         │
@@ -289,16 +304,8 @@ Answer:
 │ 2022-08-03   │ Consumers  │ flow_reversal │ 0.76        │
 └──────────────┴─────────────┴──────────────┴─────────────┘
 
-Evidence Card:
-• Operation: changepoint
-• Parameters:
-  - min_confidence: 0.7
-  - penalty: 3.0
-• Filters applied:
-  - state_abb = MI
-  - eff_gas_day >= 2022-06-01
-• Changepoints detected: 2
-• Runtime: 156.7ms plan, 2341.9ms collect
+Answer:
+The changepoint detection analysis identified 2 significant flow anomalies in Michigan pipelines since June 2022. On July 15th, ANR Pipeline experienced a volume spike with 89% confidence, while Consumers pipeline showed a flow reversal pattern on August 3rd with 76% confidence. Both events exceeded the minimum confidence threshold of 70%.
 ```
 
 ## Architecture & Design
@@ -328,6 +335,11 @@ Evidence Card:
 - **Structured Output**: JSON schema validation for plans
 - **Fallback Logic**: Deterministic patterns when LLM unavailable
 - **Cost Optimization**: Caching and plan reuse
+- **Answer Generation**: Automatic prose summaries of query results
+  - Generates 2-4 sentence explanations of findings
+  - Uses top 3 result rows as context for accuracy
+  - Configurable with `--no-answer` flag to suppress
+  - Handles complex data types (dates, numbers) automatically
 
 ## Development
 
