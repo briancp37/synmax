@@ -1,4 +1,8 @@
-"""Query execution engine."""
+"""Query execution engine.
+
+DEPRECATED: This module is deprecated in favor of agent_executor.py.
+All new code should use the DAG-based agent executor instead.
+"""
 
 from __future__ import annotations
 

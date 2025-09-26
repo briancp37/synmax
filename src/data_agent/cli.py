@@ -263,111 +263,127 @@ def ask(
             return
 
         else:
-            # Legacy planner modes (deterministic or llm)
-            from data_agent.cache import CacheManager
-            from data_agent.core.executor import run
-            from data_agent.core.planner import plan as create_plan
-            from data_agent.ingest.loader import load_dataset
+            # Legacy mode - compile to tiny DAG and run through agent executor
+            from data_agent.core.agent_shim import build_tiny_dag_from_legacy_args, extract_date_range_from_query
+            from data_agent.core.agent_executor import execute as agent_execute
+            from data_agent.core.handles import StepHandle, StepStats
 
             typer.echo(f"Question: {q}")
-            typer.echo(f"Using planner: {planner}")
+            typer.echo(f"Using legacy mode (compiled to DAG)")
             if model:
-                typer.echo(f"Using model: {model}")
+                typer.echo(f"Model: {model} (not used in legacy mode)")
 
-            # Create the plan
-            query_plan = create_plan(q, deterministic=(planner == "deterministic"), model=model)
+            # Parse legacy options from the query
+            legacy_opts = {}
+            
+            # Extract date range from query if present
+            date_range = extract_date_range_from_query(q)
+            if date_range:
+                legacy_opts["date_range"] = date_range
+            
+            # Build tiny DAG from legacy query
+            plan_graph = build_tiny_dag_from_legacy_args(q, legacy_opts)
 
             if dry_run:
-                # Show plan JSON and exit
-                plan_json = query_plan.model_dump()
-                typer.echo("\nPlan JSON:")
-                # Use custom serializer to handle Polars expressions
-                typer.echo(json.dumps(plan_json, indent=2, default=str))
-                logger.info("Dry run executed", extra={"question": q, "planner": planner})
+                # Show compiled DAG and estimates
+                from data_agent.core.agent_planner import estimate_plan_complexity
+                estimates = estimate_plan_complexity(plan_graph)
+                
+                typer.echo(f"\nCompiled Legacy Query to DAG:")
+                typer.echo(f"Plan hash: {plan_graph.plan_hash()}")
+                typer.echo(f"Steps: {len(plan_graph.nodes)}")
+                
+                typer.echo("\nPlan Structure:")
+                typer.echo(f"  Topological order: {' → '.join(estimates['topological_order'])}")
+                typer.echo(f"  Estimated time: {estimates['estimated_time_seconds']:.1f}s")
+                typer.echo(f"  Estimated memory: {estimates['estimated_memory_mb']}MB")
+                if estimates["will_checkpoint"]:
+                    typer.echo(f"  Will checkpoint: {', '.join(estimates['will_checkpoint'])}")
+
+                typer.echo("\nCompiled DAG JSON:")
+                typer.echo(json.dumps(plan_graph.model_dump(), indent=2))
+                logger.info(
+                    "Dry run executed (legacy mode)",
+                    extra={"question": q, "plan_hash": plan_graph.plan_hash()},
+                )
                 return
 
-            # Dataset already loaded at the top of the function
+            # Create dataset handle
+            dataset_path = config.DATA_PATH
+            if not dataset_path.exists():
+                typer.echo("Error: Dataset not found. Please run 'agent load' first.", err=True)
+                raise typer.Exit(1) from None
 
-            # Create cache manager (or None to bypass cache)
-            if no_cache:
-                cache_manager = None
+            schema = lf.collect_schema()
+            stats = StepStats(
+                rows=lf.select(pl.len()).collect().item(),
+                bytes=dataset_path.stat().st_size,
+                columns=len(schema),
+                null_count={},
+                computed_at=time.time(),
+            )
+
+            dataset_handle = StepHandle(
+                id="raw",
+                store="parquet",
+                path=dataset_path,
+                engine="polars",
+                schema={col: str(dtype) for col, dtype in schema.items()},
+                stats=stats,
+                fingerprint="dataset",
+            )
+
+            # Execute the compiled DAG with materialize and cache options
+            result_df, evidence = agent_execute(
+                plan_graph, 
+                dataset_handle, 
+                materialize=materialize,
+                cache_ttl=cache_ttl,
+                cache_max_gb=cache_max_gb
+            )
+
+            typer.echo(f"\nPlan hash: {plan_graph.plan_hash()}")
+            typer.echo(f"Steps executed: {len(evidence['steps'])}")
+            typer.echo(f"Final result: {result_df.height} rows, {result_df.width} columns")
+
+            # Show result table
+            if result_df.height > 0:
+                typer.echo("\nResult:")
+                typer.echo(str(result_df))
             else:
-                from data_agent.cache import CacheManager
-                cache_manager = CacheManager(
-                    ttl_hours=cache_ttl if cache_ttl is not None else config.DATA_AGENT_CACHE_TTL_HOURS
-                )
+                typer.echo("\nResult: Empty table")
 
-            # Execute the plan
-            answer = run(lf, query_plan, cache_manager)
-
-            # Display results
-            typer.echo("\nAnswer:")
-            typer.echo(answer.table)
-
-            # Display evidence card
-            typer.echo("\nEvidence Card:")
-            typer.echo(f"• Rows out: {answer.evidence['rows_out']:,}")
-            typer.echo(f"• Columns: {', '.join(answer.evidence['columns'])}")
-
-            if answer.evidence["filters"]:
-                typer.echo("• Filters applied:")
-                for f in answer.evidence["filters"]:
-                    typer.echo(f"  - {f['column']} {f['op']} {f['value']}")
-
-            if answer.evidence["aggregate"]:
-                agg = answer.evidence["aggregate"]
-                if agg["groupby"]:
-                    typer.echo(f"• Grouped by: {', '.join(agg['groupby'])}")
-                typer.echo("• Metrics:")
-                for m in agg["metrics"]:
-                    typer.echo(f"  - {m['fn']}({m['col']})")
-
-            if answer.evidence["sort"]:
-                sort = answer.evidence["sort"]
-                typer.echo(
-                    f"• Sorted by: {', '.join(sort['by'])} ({'desc' if sort['desc'] else 'asc'})"
-                )
-                if sort["limit"]:
-                    typer.echo(f"• Limited to: {sort['limit']} rows")
-
-            if answer.evidence["operation"]:
-                op = answer.evidence["operation"]
-                typer.echo(f"• Operation: {op['type']}")
-                if op["parameters"]:
-                    typer.echo("• Parameters:")
-                    for key, value in op["parameters"].items():
-                        typer.echo(f"  - {key}: {value}")
-                    if op["type"] == "changepoint":
-                        typer.echo(
-                            "  (Tip: Ask 'with min_confidence=0.5' or 'with penalty=5.0' "
-                            "to adjust parameters)",
-                        )
-
-            plan_time = answer.evidence["timings_ms"]["plan"]
-            collect_time = answer.evidence["timings_ms"]["collect"]
-            typer.echo(f"• Runtime: {plan_time:.1f}ms plan, {collect_time:.1f}ms collect")
-            typer.echo(f"• Cache: {'hit' if answer.evidence['cache']['hit'] else 'miss'}")
-
+            # Export if requested
             if export:
-                # Export results to JSON using the export module
-                from data_agent.core.export import export_results
-
+                export_path = export
                 if export == "auto":
-                    # Auto-generate filename in artifacts/outputs/
-                    export_path = export_results(q, query_plan, answer)
-                else:
-                    # Use custom path
-                    export_path = export_results(q, query_plan, answer, export_path=export)
+                    timestamp = int(time.time())
+                    export_path = f"artifacts/outputs/{timestamp}_{plan_graph.plan_hash()[:8]}.json"
 
+                export_data = {
+                    "question": q,
+                    "planner": "legacy_shim",
+                    "model": model,
+                    "plan": plan_graph.model_dump(),
+                    "plan_hash": plan_graph.plan_hash(),
+                    "result": {
+                        "rows": result_df.height,
+                        "columns": result_df.width,
+                        "data": result_df.to_dicts() if result_df.height <= 100 else "truncated",
+                    },
+                    "evidence": evidence,
+                }
+
+                with open(export_path, "w") as f:
+                    json.dump(export_data, f, indent=2, default=str)
                 typer.echo(f"\nResults exported to: {export_path}")
 
             logger.info(
-                "Ask command executed",
+                "Ask command executed (legacy mode)",
                 extra={
                     "question": q,
-                    "planner": planner,
-                    "export": export,
-                    "rows_out": answer.evidence["rows_out"],
+                    "planner": "legacy_shim",
+                    "plan_hash": plan_graph.plan_hash(),
                 },
             )
 
