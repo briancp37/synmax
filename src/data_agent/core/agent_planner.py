@@ -79,7 +79,7 @@ class AgentPlanner:
         """Generate plan using LLM function calling."""
         if self.client is None:
             raise ValueError("No LLM client available for planning")
-            
+
         # Build the function schema
         function_schema = self._build_function_schema(available_columns)
 
@@ -211,20 +211,28 @@ class AgentPlanner:
                         "metrics": [{"col": "scheduled_quantity", "fn": "sum"}],
                     },
                 },
-                {"id": "s", "op": "stl_deseasonalize", "params": {"column": "sum_scheduled_quantity"}},
+                {
+                    "id": "s",
+                    "op": "stl_deseasonalize",
+                    "params": {"column": "sum_scheduled_quantity"},
+                },
                 {
                     "id": "c",
                     "op": "changepoint",
                     "params": {
-                        "column": "deseasonalized", 
-                        "method": "pelt", 
+                        "column": "deseasonalized",
+                        "method": "pelt",
                         "min_size": 7,
                         "penalty": 1.0,
                         "min_confidence": 0.1,
-                        "groupby": ["pipeline_name"]
+                        "groupby": ["pipeline_name"],
                     },
                 },
-                {"id": "r", "op": "rank", "params": {"by": ["change_magnitude"], "descending": True}},
+                {
+                    "id": "r",
+                    "op": "rank",
+                    "params": {"by": ["change_magnitude"], "descending": True},
+                },
                 {"id": "l", "op": "limit", "params": {"n": 10}},
                 {"id": "e", "op": "evidence_collect", "params": {}},
             ],
@@ -295,7 +303,20 @@ Create a DAG plan that efficiently answers the user's query."""
         query_lower = query.lower()
 
         # Time series patterns (check first - most specific)
-        if any(word in query_lower for word in ["trend", "change", "shift", "regime", "changepoint", "structural", "break", "seasonality", "deseasonalize"]):
+        if any(
+            word in query_lower
+            for word in [
+                "trend",
+                "change",
+                "shift",
+                "regime",
+                "changepoint",
+                "structural",
+                "break",
+                "seasonality",
+                "deseasonalize",
+            ]
+        ):
             logger.info("Using time_series_analysis macro for fallback")
             return create_macro_plan("time_series_analysis")
 
@@ -303,6 +324,7 @@ Create a DAG plan that efficiently answers the user's query."""
         if any(word in query_lower for word in ["top", "highest", "largest", "biggest"]):
             # Extract number if present
             import re
+
             numbers = re.findall(r"\d+", query)
             k = int(numbers[0]) if numbers else 10
             logger.info(f"Using top_k_ranking macro for fallback with k={k}")
@@ -316,10 +338,6 @@ Create a DAG plan that efficiently answers the user's query."""
         # Default simple plan - use simple aggregation macro
         logger.info("Using default simple_aggregation macro for fallback")
         return create_macro_plan("simple_aggregation", limit=100)
-
-
-
-
 
     def _repair_plan(self, plan: PlanGraph, available_columns: list[str]) -> PlanGraph:
         """Repair and validate a plan."""
@@ -353,14 +371,14 @@ Create a DAG plan that efficiently answers the user's query."""
 
     def plan_from_macro(self, macro_name: str, **kwargs: Any) -> PlanGraph:
         """Create a plan using a predefined macro.
-        
+
         Args:
             macro_name: Name of the macro to use
             **kwargs: Additional parameters for the macro
-            
+
         Returns:
             PlanGraph created from the macro
-            
+
         Raises:
             ValueError: If the macro name is not recognized
         """
@@ -370,7 +388,9 @@ Create a DAG plan that efficiently answers the user's query."""
             return plan
         except ValueError as e:
             available_macros = list(get_available_macros().keys())
-            raise ValueError(f"Unknown macro '{macro_name}'. Available macros: {available_macros}") from e
+            raise ValueError(
+                f"Unknown macro '{macro_name}'. Available macros: {available_macros}"
+            ) from e
 
     def _has_valid_path(self, plan: PlanGraph) -> bool:
         """Check if there's a valid path from inputs to outputs."""

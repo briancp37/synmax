@@ -117,7 +117,10 @@ def ask(
 
     # Validate materialize option
     if materialize not in ["all", "heavy", "never"]:
-        typer.echo(f"Invalid materialize option: {materialize}. Must be 'all', 'heavy', or 'never'", err=True)
+        typer.echo(
+            f"Invalid materialize option: {materialize}. Must be 'all', 'heavy', or 'never'",
+            err=True,
+        )
         raise typer.Exit(1) from None
 
     # Ensure directories exist
@@ -209,11 +212,11 @@ def ask(
 
             # Execute the plan with materialize and cache options
             result_df, evidence = agent_execute(
-                plan_graph, 
-                dataset_handle, 
+                plan_graph,
+                dataset_handle,
                 materialize=materialize,
                 cache_ttl=cache_ttl,
-                cache_max_gb=cache_max_gb
+                cache_max_gb=cache_max_gb,
             )
 
             typer.echo(f"\nPlan hash: {plan_graph.plan_hash()}")
@@ -264,35 +267,39 @@ def ask(
 
         else:
             # Legacy mode - compile to tiny DAG and run through agent executor
-            from data_agent.core.agent_shim import build_tiny_dag_from_legacy_args, extract_date_range_from_query
             from data_agent.core.agent_executor import execute as agent_execute
+            from data_agent.core.agent_shim import (
+                build_tiny_dag_from_legacy_args,
+                extract_date_range_from_query,
+            )
             from data_agent.core.handles import StepHandle, StepStats
 
             typer.echo(f"Question: {q}")
-            typer.echo(f"Using legacy mode (compiled to DAG)")
+            typer.echo("Using legacy mode (compiled to DAG)")
             if model:
                 typer.echo(f"Model: {model} (not used in legacy mode)")
 
             # Parse legacy options from the query
             legacy_opts = {}
-            
+
             # Extract date range from query if present
             date_range = extract_date_range_from_query(q)
             if date_range:
                 legacy_opts["date_range"] = date_range
-            
+
             # Build tiny DAG from legacy query
             plan_graph = build_tiny_dag_from_legacy_args(q, legacy_opts)
 
             if dry_run:
                 # Show compiled DAG and estimates
                 from data_agent.core.agent_planner import estimate_plan_complexity
+
                 estimates = estimate_plan_complexity(plan_graph)
-                
-                typer.echo(f"\nCompiled Legacy Query to DAG:")
+
+                typer.echo("\nCompiled Legacy Query to DAG:")
                 typer.echo(f"Plan hash: {plan_graph.plan_hash()}")
                 typer.echo(f"Steps: {len(plan_graph.nodes)}")
-                
+
                 typer.echo("\nPlan Structure:")
                 typer.echo(f"  Topological order: {' → '.join(estimates['topological_order'])}")
                 typer.echo(f"  Estimated time: {estimates['estimated_time_seconds']:.1f}s")
@@ -335,11 +342,11 @@ def ask(
 
             # Execute the compiled DAG with materialize and cache options
             result_df, evidence = agent_execute(
-                plan_graph, 
-                dataset_handle, 
+                plan_graph,
+                dataset_handle,
                 materialize=materialize,
                 cache_ttl=cache_ttl,
-                cache_max_gb=cache_max_gb
+                cache_max_gb=cache_max_gb,
             )
 
             typer.echo(f"\nPlan hash: {plan_graph.plan_hash()}")
@@ -867,11 +874,13 @@ def run(
 ) -> None:
     """Execute a pre-generated plan from JSON file."""
     import json
-    from pathlib import Path
 
     # Validate materialize option
     if materialize not in ["all", "heavy", "never"]:
-        typer.echo(f"Invalid materialize option: {materialize}. Must be 'all', 'heavy', or 'never'", err=True)
+        typer.echo(
+            f"Invalid materialize option: {materialize}. Must be 'all', 'heavy', or 'never'",
+            err=True,
+        )
         raise typer.Exit(1) from None
 
     from data_agent.core.dsl_loader import DSLLoader, DSLValidationError
@@ -916,11 +925,11 @@ def run(
 
         # Execute the plan with materialize and cache options
         result_df, evidence = agent_execute(
-            plan_graph, 
-            dataset_handle, 
+            plan_graph,
+            dataset_handle,
             materialize=materialize,
             cache_ttl=cache_ttl,
-            cache_max_gb=cache_max_gb
+            cache_max_gb=cache_max_gb,
         )
 
         typer.echo(f"Plan executed: {plan_graph.plan_hash()}")
@@ -939,9 +948,10 @@ def run(
             export_path = export
             if export == "auto":
                 import time
+
                 timestamp = int(time.time())
                 export_path = f"artifacts/outputs/{timestamp}_{plan_graph.plan_hash()[:8]}.json"
-            
+
             output_data = {
                 "plan": plan_graph.model_dump(),
                 "plan_hash": plan_graph.plan_hash(),
@@ -979,19 +989,19 @@ def run(
 def macros() -> None:
     """List available deterministic plan macros."""
     from data_agent.core.dsl_loader import get_available_macros
-    
+
     macros_dict = get_available_macros()
-    
+
     typer.echo("Available Plan Macros:")
     typer.echo("=" * 40)
-    
+
     for name, description in macros_dict.items():
         typer.echo(f"• {name}: {description}")
-    
+
     typer.echo("\nUsage:")
     typer.echo("  agent ask 'your query' --planner deterministic  # Uses fallback macros")
     typer.echo("  agent run --plan examples/my_plan.json         # Load custom plan")
-    
+
     logger.info("Macros command executed")
 
 

@@ -127,7 +127,9 @@ def run(
     else:
         # Return lazy handle
         # Note: In practice, the executor would maintain the LazyFrame reference
-        schema = handle.schema or {}  # Preserve input schema (filtering doesn't change column types)
+        schema = (
+            handle.schema or {}
+        )  # Preserve input schema (filtering doesn't change column types)
         return create_lazy_handle(
             f"{handle.id}_filtered",
             schema=schema,
