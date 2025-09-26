@@ -107,6 +107,35 @@ class AgentExecutor:
         # Build comprehensive evidence
         evidence = self._build_final_evidence(plan, final_df)
 
+        # Generate LLM answer and attach to evidence
+        try:
+            from .answer import compose_answer_llm
+            from .llm_client import LLMClient
+            from .. import config
+            
+            # Only generate answer if we have API keys available
+            if config.OPENAI_API_KEY or config.ANTHROPIC_API_KEY:
+                # Create a default LLM client for answer generation
+                if config.OPENAI_API_KEY:
+                    llm_client = LLMClient(model="gpt-4.1")
+                else:
+                    llm_client = LLMClient(model="claude-sonnet")
+                
+                # Convert plan to dict format for compose_answer_llm
+                plan_dict = {
+                    "op": plan.nodes[-1].op.value if plan.nodes else "analysis",
+                    "macro": "query_execution"
+                }
+                
+                # Generate the answer
+                answer_text = compose_answer_llm(plan_dict, final_df, evidence, llm_client)
+                evidence["answer_text"] = answer_text
+            else:
+                evidence["answer_text"] = "Answer unavailable (no API keys configured)."
+        except Exception:
+            # If answer generation fails, continue without it
+            evidence["answer_text"] = "Answer unavailable."
+
         # Save evidence file to artifacts/outputs/<plan_hash>.json
         total_time = sum(step_evidence.timings["total"] for step_evidence in self.step_evidence)
         evidence_path = save_plan_evidence(plan, self.step_evidence, final_df, total_time)
@@ -386,7 +415,13 @@ class AgentExecutor:
             rank_expr = pl.col(col).rank(method=method, descending=descending).alias(f"rank_{col}")
             rank_exprs.append(rank_expr)
 
-        return lf.with_columns(rank_exprs)
+        # Add rank columns and sort by the original columns to get proper ordering
+        result_lf = lf.with_columns(rank_exprs)
+        
+        # Sort by the original columns in the same order as the ranking
+        result_lf = result_lf.sort(by, descending=descending)
+        
+        return result_lf
 
     def _execute_evidence_collect(self, step: Any, lf: pl.LazyFrame) -> pl.LazyFrame:
         """Execute evidence collection (pass-through with sampling)."""

@@ -17,8 +17,8 @@ app = typer.Typer(
     help="SynMax Data Agent - Natural language queries over gas pipeline data",
 )
 
-# Set up logging on module import
-setup_logging()
+# Set up logging on module import - suppress all logs for cleaner CLI output
+setup_logging(level="ERROR", structured=False)
 logger = get_logger("cli")
 
 
@@ -110,6 +110,9 @@ def ask(
         True,
         "--fallback/--no-fallback",
         help="Use deterministic fallbacks on LLM failure (agent mode only)",
+    ),
+    no_answer: bool = typer.Option(
+        False, "--no-answer", help="Suppress LLM-generated answer section"
     ),
 ) -> None:
     """Ask a natural-language question about the dataset."""
@@ -223,12 +226,23 @@ def ask(
             typer.echo(f"Steps executed: {len(evidence['steps'])}")
             typer.echo(f"Final result: {result_df.height} rows, {result_df.width} columns")
 
-            # Show result table
+            # Show evidence summary first
+            typer.echo("\nEvidence:")
+            typer.echo(f"  Plan executed in {len(evidence['steps'])} steps")
+            if evidence.get("evidence_file_path"):
+                typer.echo(f"  Detailed evidence: {evidence['evidence_file_path']}")
+
+            # Show result table second
             if result_df.height > 0:
-                typer.echo("\nResult:")
+                typer.echo("\nResults:")
                 typer.echo(str(result_df))
             else:
-                typer.echo("\nResult: Empty table")
+                typer.echo("\nResults: Empty table")
+
+            # Show answer last (unless --no-answer is used)
+            if not no_answer and evidence.get("answer_text"):
+                typer.echo("\nAnswer:")
+                typer.echo(evidence["answer_text"])
 
             # Export if requested
             if export:
@@ -353,12 +367,23 @@ def ask(
             typer.echo(f"Steps executed: {len(evidence['steps'])}")
             typer.echo(f"Final result: {result_df.height} rows, {result_df.width} columns")
 
-            # Show result table
+            # Show evidence summary first
+            typer.echo("\nEvidence:")
+            typer.echo(f"  Plan executed in {len(evidence['steps'])} steps")
+            if evidence.get("evidence_file_path"):
+                typer.echo(f"  Detailed evidence: {evidence['evidence_file_path']}")
+
+            # Show result table second
             if result_df.height > 0:
-                typer.echo("\nResult:")
+                typer.echo("\nResults:")
                 typer.echo(str(result_df))
             else:
-                typer.echo("\nResult: Empty table")
+                typer.echo("\nResults: Empty table")
+
+            # Show answer last (unless --no-answer is used)
+            if not no_answer and evidence.get("answer_text"):
+                typer.echo("\nAnswer:")
+                typer.echo(evidence["answer_text"])
 
             # Export if requested
             if export:
