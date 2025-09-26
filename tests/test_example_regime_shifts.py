@@ -10,7 +10,7 @@ import pytest
 from data_agent.config import DATA_PATH, PROJECT_ROOT
 from data_agent.core.agent_executor import AgentExecutor
 from data_agent.core.agent_schema import PlanGraph
-from data_agent.core.handles import HandleStorage, StepHandle, StepStats
+from data_agent.core.handles import StepHandle, StepStats
 
 
 class TestRegimeShifts2021:
@@ -33,11 +33,12 @@ class TestRegimeShifts2021:
         """Create a handle to the test dataset."""
         if not DATA_PATH.exists():
             pytest.skip(f"Dataset not found at {DATA_PATH}")
-        
+
         # Load dataset to get schema and stats
-        import polars as pl
         import time
-        
+
+        import polars as pl
+
         lf = pl.scan_parquet(DATA_PATH)
         schema = lf.collect_schema()
         stats = StepStats(
@@ -47,7 +48,7 @@ class TestRegimeShifts2021:
             null_count={},
             computed_at=time.time(),
         )
-        
+
         return StepHandle(
             id="raw",
             store="parquet",
@@ -75,12 +76,12 @@ class TestRegimeShifts2021:
         step_ops = {step.id: step.op for step in plan_graph.nodes}
         expected_ops = {
             "f": "filter",
-            "a": "aggregate", 
+            "a": "aggregate",
             "s": "stl_deseasonalize",
             "c": "changepoint",
             "r": "rank",
             "l": "limit",
-            "e": "evidence_collect"
+            "e": "evidence_collect",
         }
         assert step_ops == expected_ops
 
@@ -94,7 +95,7 @@ class TestRegimeShifts2021:
     def test_plan_parameters(self, plan_graph: PlanGraph):
         """Test that plan parameters are correctly specified."""
         steps_by_id = {step.id: step for step in plan_graph.nodes}
-        
+
         # Filter step should filter for 2022 (dataset starts from 2022)
         filter_step = steps_by_id["f"]
         assert filter_step.params["column"] == "eff_gas_day"
@@ -134,7 +135,9 @@ class TestRegimeShifts2021:
         assert len(hash1) == 64  # SHA256 hex digest
 
     @pytest.mark.skipif(not DATA_PATH.exists(), reason="Dataset not available")
-    def test_end_to_end_execution(self, plan_graph: PlanGraph, dataset_handle, executor: AgentExecutor):
+    def test_end_to_end_execution(
+        self, plan_graph: PlanGraph, dataset_handle, executor: AgentExecutor
+    ):
         """Test end-to-end execution of the regime shifts plan."""
         # Execute the plan
         result_df, evidence = executor.execute(plan_graph, dataset_handle)
@@ -160,7 +163,7 @@ class TestRegimeShifts2021:
         # Verify step evidence
         step_evidence = evidence["steps"]
         assert len(step_evidence) == 7  # Should have evidence for all 7 steps
-        
+
         # Check that each step has required evidence fields
         for step_ev in step_evidence:
             assert "node_id" in step_ev
@@ -177,19 +180,23 @@ class TestRegimeShifts2021:
         assert final_evidence["column_names"] == result_df.columns
 
     @pytest.mark.skipif(not DATA_PATH.exists(), reason="Dataset not available")
-    def test_execution_produces_expected_columns(self, plan_graph: PlanGraph, dataset_handle, executor: AgentExecutor):
+    def test_execution_produces_expected_columns(
+        self, plan_graph: PlanGraph, dataset_handle, executor: AgentExecutor
+    ):
         """Test that execution produces expected output columns."""
         result_df, evidence = executor.execute(plan_graph, dataset_handle)
 
         # Should have pipeline_name from groupby
         assert "pipeline_name" in result_df.columns
-        
+
         # Should have changepoint detection columns
         expected_cp_cols = ["changepoint_date", "change_magnitude", "confidence"]
         for col in expected_cp_cols:
-            assert col in result_df.columns, f"Expected column '{col}' not found in {result_df.columns}"
+            assert (
+                col in result_df.columns
+            ), f"Expected column '{col}' not found in {result_df.columns}"
 
-    @pytest.mark.skipif(not DATA_PATH.exists(), reason="Dataset not available") 
+    @pytest.mark.skipif(not DATA_PATH.exists(), reason="Dataset not available")
     def test_caching_behavior(self, plan_graph: PlanGraph, dataset_handle):
         """Test that plan execution can be cached."""
         executor1 = AgentExecutor()
@@ -197,7 +204,7 @@ class TestRegimeShifts2021:
 
         # First execution
         result1, evidence1 = executor1.execute(plan_graph, dataset_handle)
-        
+
         # Second execution (should potentially use cached results)
         result2, evidence2 = executor2.execute(plan_graph, dataset_handle)
 
@@ -232,7 +239,9 @@ class TestRegimeShifts2021:
             assert "dst" in edge
 
     @pytest.mark.skipif(not DATA_PATH.exists(), reason="Dataset not available")
-    def test_step_execution_order(self, plan_graph: PlanGraph, dataset_handle, executor: AgentExecutor):
+    def test_step_execution_order(
+        self, plan_graph: PlanGraph, dataset_handle, executor: AgentExecutor
+    ):
         """Test that steps execute in the correct topological order."""
         result_df, evidence = executor.execute(plan_graph, dataset_handle)
 
@@ -249,29 +258,35 @@ class TestRegimeShifts2021:
         # This tests the --plan file.json functionality
         with open(plan_path) as f:
             plan_data = json.load(f)
-        
+
         # Should be able to create PlanGraph directly
         plan = PlanGraph(**plan_data)
         assert plan is not None
         assert len(plan.nodes) == 7
 
     @pytest.mark.skipif(
-        not DATA_PATH.exists() or not os.getenv("OPENAI_API_KEY") and not os.getenv("ANTHROPIC_API_KEY"), 
-        reason="Dataset or API keys not available"
+        not DATA_PATH.exists()
+        or not os.getenv("OPENAI_API_KEY")
+        and not os.getenv("ANTHROPIC_API_KEY"),
+        reason="Dataset or API keys not available",
     )
-    def test_output_snapshot_format(self, plan_graph: PlanGraph, dataset_handle, executor: AgentExecutor):
+    def test_output_snapshot_format(
+        self, plan_graph: PlanGraph, dataset_handle, executor: AgentExecutor
+    ):
         """Test that output matches expected snapshot format."""
         result_df, evidence = executor.execute(plan_graph, dataset_handle)
 
         # Test result format
         assert result_df.height <= 10  # Limited to 10 rows as specified
-        assert result_df.height > 0    # Should have some results
+        assert result_df.height > 0  # Should have some results
 
         # Test evidence JSON structure for snapshotting
         assert isinstance(evidence, dict)
-        
+
         # Should be JSON serializable
-        json_str = json.dumps(evidence, default=str)  # Use default=str for any non-serializable objects
+        json_str = json.dumps(
+            evidence, default=str
+        )  # Use default=str for any non-serializable objects
         assert len(json_str) > 0
 
         # Evidence should contain plan and execution details

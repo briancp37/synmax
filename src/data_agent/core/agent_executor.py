@@ -9,7 +9,7 @@ import polars as pl
 
 from ..config import ARTIFACTS_DIR, BYTE_CKPT, ROW_CKPT
 from .agent_schema import PlanGraph, StepType
-from .evidence import StepEvidence
+from .evidence import StepEvidence, generate_step_code_snippet, save_plan_evidence
 from .handles import HandleStorage, StepHandle, StepStats, create_lazy_handle
 
 
@@ -107,6 +107,13 @@ class AgentExecutor:
         # Build comprehensive evidence
         evidence = self._build_final_evidence(plan, final_df)
 
+        # Save evidence file to artifacts/outputs/<plan_hash>.json
+        total_time = sum(step_evidence.timings["total"] for step_evidence in self.step_evidence)
+        evidence_path = save_plan_evidence(plan, self.step_evidence, final_df, total_time)
+
+        # Add evidence file path to the evidence dict
+        evidence["evidence_file_path"] = str(evidence_path)
+
         return final_df, evidence
 
     def _execute_step(
@@ -190,7 +197,9 @@ class AgentExecutor:
         t4 = time.perf_counter()
 
         # Generate code snippet
-        snippet = self._generate_step_snippet(step, input_handle)
+        snippet = generate_step_code_snippet(
+            step.op.value, step.params, str(input_handle.path) if input_handle.path else None
+        )
 
         # Collect step evidence
         step_evidence = StepEvidence(
@@ -264,12 +273,13 @@ class AgentExecutor:
                 try:
                     # Try to parse as date strings
                     import datetime
+
                     lo_date = datetime.datetime.strptime(lo, "%Y-%m-%d")
                     hi_date = datetime.datetime.strptime(hi, "%Y-%m-%d")
                     # If successful, use date literals
                     return lf.filter(
-                        (pl.col(column) >= pl.date(lo_date.year, lo_date.month, lo_date.day)) & 
-                        (pl.col(column) <= pl.date(hi_date.year, hi_date.month, hi_date.day))
+                        (pl.col(column) >= pl.date(lo_date.year, lo_date.month, lo_date.day))
+                        & (pl.col(column) <= pl.date(hi_date.year, hi_date.month, hi_date.day))
                     )
                 except ValueError:
                     # Fall back to string comparison
@@ -403,23 +413,17 @@ class AgentExecutor:
         """Execute STL deseasonalization using the step implementation."""
         # Use the actual step implementation
         from .steps import stl_deseasonalize
-        
+
         # Create a temporary handle for the step implementation
         temp_handle = self.handle_storage.materialize_handle(
-            lf.collect(), 
-            f"temp_{step.id}", 
-            f"temp_{step.id}",
-            step.engine
+            lf.collect(), f"temp_{step.id}", f"temp_{step.id}", step.engine
         )
-        
+
         # Run the step implementation
         result_handle = stl_deseasonalize.run(
-            temp_handle,
-            step.params,
-            self.handle_storage,
-            "dataset"
+            temp_handle, step.params, self.handle_storage, "dataset"
         )
-        
+
         # Return lazy frame from result
         if result_handle.path:
             return pl.scan_parquet(result_handle.path)
@@ -431,23 +435,15 @@ class AgentExecutor:
         """Execute changepoint detection using the step implementation."""
         # Use the actual step implementation
         from .steps import changepoint
-        
+
         # Create a temporary handle for the step implementation
         temp_handle = self.handle_storage.materialize_handle(
-            lf.collect(), 
-            f"temp_{step.id}", 
-            f"temp_{step.id}",
-            step.engine
+            lf.collect(), f"temp_{step.id}", f"temp_{step.id}", step.engine
         )
-        
+
         # Run the step implementation
-        result_handle = changepoint.run(
-            temp_handle,
-            step.params,
-            self.handle_storage,
-            "dataset"
-        )
-        
+        result_handle = changepoint.run(temp_handle, step.params, self.handle_storage, "dataset")
+
         # Return lazy frame from result
         if result_handle.path:
             return pl.scan_parquet(result_handle.path)
@@ -612,11 +608,11 @@ class AgentExecutor:
 
 
 def execute(
-    plan: PlanGraph, 
-    dataset_handle: StepHandle, 
+    plan: PlanGraph,
+    dataset_handle: StepHandle,
     materialize: str = "heavy",
     cache_ttl: int | None = None,
-    cache_max_gb: float | None = None
+    cache_max_gb: float | None = None,
 ) -> tuple[pl.DataFrame, dict[str, Any]]:
     """Execute a DAG plan and return results with evidence.
 
@@ -631,23 +627,23 @@ def execute(
         Tuple of (final_table, evidence_dict)
     """
     # Create handle storage with custom cache settings if provided
-    from ..cache.cache import CacheManager
+
     handle_storage = HandleStorage()
-    
+
     # Apply materialization strategy to the plan
     plan = _apply_materialize_strategy(plan, materialize)
-    
+
     executor = AgentExecutor(handle_storage)
     return executor.execute(plan, dataset_handle)
 
 
 def _apply_materialize_strategy(plan: PlanGraph, materialize: str) -> PlanGraph:
     """Apply materialization strategy to plan nodes.
-    
+
     Args:
         plan: Original plan graph
         materialize: Strategy - "all", "heavy", or "never"
-        
+
     Returns:
         Modified plan graph with materialization flags set
     """
@@ -665,5 +661,5 @@ def _apply_materialize_strategy(plan: PlanGraph, materialize: str) -> PlanGraph:
             # Heavy operations that benefit from materialization
             heavy_ops = {StepType.AGGREGATE, StepType.CHANGEPOINT, StepType.EVIDENCE_COLLECT}
             node.materialize = node.op in heavy_ops
-    
+
     return plan
