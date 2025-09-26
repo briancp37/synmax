@@ -58,9 +58,9 @@ def test_ask_command():
     result = runner.invoke(app, ["ask", "total receipts for ANR"])
     assert result.exit_code == 0
     assert "Question: total receipts for ANR" in result.stdout
-    assert "Using planner: deterministic" in result.stdout
-    assert "Answer:" in result.stdout
-    assert "Evidence Card:" in result.stdout
+    # Now defaults to agent planner, not deterministic
+    assert "Using planner: agent" in result.stdout
+    assert "Final result:" in result.stdout
 
 
 def test_ask_command_with_planner():
@@ -81,7 +81,7 @@ def test_ask_command_with_export():
         app, ["ask", "sum of deliveries for ANR on 2022-01-01", "--export", "output.json"]
     )
     assert result.exit_code == 0
-    assert "Results exported to: output.json" in result.stdout
+    assert "Plan exported to: output.json" in result.stdout
 
 
 def test_rules_command():

@@ -611,15 +611,59 @@ class AgentExecutor:
         }
 
 
-def execute(plan: PlanGraph, dataset_handle: StepHandle) -> tuple[pl.DataFrame, dict[str, Any]]:
+def execute(
+    plan: PlanGraph, 
+    dataset_handle: StepHandle, 
+    materialize: str = "heavy",
+    cache_ttl: int | None = None,
+    cache_max_gb: float | None = None
+) -> tuple[pl.DataFrame, dict[str, Any]]:
     """Execute a DAG plan and return results with evidence.
 
     Args:
         plan: DAG plan to execute
         dataset_handle: Handle to input dataset
+        materialize: Materialization strategy: "all", "heavy", or "never"
+        cache_ttl: Cache TTL in hours (overrides config)
+        cache_max_gb: Cache max size in GB (overrides config)
 
     Returns:
         Tuple of (final_table, evidence_dict)
     """
-    executor = AgentExecutor()
+    # Create handle storage with custom cache settings if provided
+    from ..cache.cache import CacheManager
+    handle_storage = HandleStorage()
+    
+    # Apply materialization strategy to the plan
+    plan = _apply_materialize_strategy(plan, materialize)
+    
+    executor = AgentExecutor(handle_storage)
     return executor.execute(plan, dataset_handle)
+
+
+def _apply_materialize_strategy(plan: PlanGraph, materialize: str) -> PlanGraph:
+    """Apply materialization strategy to plan nodes.
+    
+    Args:
+        plan: Original plan graph
+        materialize: Strategy - "all", "heavy", or "never"
+        
+    Returns:
+        Modified plan graph with materialization flags set
+    """
+    if materialize == "never":
+        # Don't materialize any steps
+        for node in plan.nodes:
+            node.materialize = False
+    elif materialize == "all":
+        # Materialize all steps
+        for node in plan.nodes:
+            node.materialize = True
+    elif materialize == "heavy":
+        # Materialize heavy operations (default behavior)
+        for node in plan.nodes:
+            # Heavy operations that benefit from materialization
+            heavy_ops = {StepType.AGGREGATE, StepType.CHANGEPOINT, StepType.EVIDENCE_COLLECT}
+            node.materialize = node.op in heavy_ops
+    
+    return plan

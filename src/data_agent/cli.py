@@ -94,6 +94,15 @@ def ask(
         help="Export results to JSON file (use 'auto' for artifacts/outputs/{run_id}.json)",
     ),
     dry_run: bool = typer.Option(False, "--dry-run", help="Show plan JSON without executing"),
+    materialize: str = typer.Option(
+        "heavy", "--materialize", help="Materialization strategy: all, heavy, or never"
+    ),
+    cache_ttl: Optional[int] = typer.Option(
+        None, "--cache-ttl", help="Cache TTL in hours (overrides config default)"
+    ),
+    cache_max_gb: Optional[float] = typer.Option(
+        None, "--cache-max-gb", help="Maximum cache size in GB (overrides config default)"
+    ),
     no_cache: bool = typer.Option(
         False, "--no-cache", help="Bypass cache and force fresh execution"
     ),
@@ -105,6 +114,11 @@ def ask(
 ) -> None:
     """Ask a natural-language question about the dataset."""
     import json
+
+    # Validate materialize option
+    if materialize not in ["all", "heavy", "never"]:
+        typer.echo(f"Invalid materialize option: {materialize}. Must be 'all', 'heavy', or 'never'", err=True)
+        raise typer.Exit(1) from None
 
     # Ensure directories exist
     config.ensure_directories()
@@ -193,8 +207,14 @@ def ask(
                 fingerprint="dataset",
             )
 
-            # Execute the plan
-            result_df, evidence = agent_execute(plan_graph, dataset_handle)
+            # Execute the plan with materialize and cache options
+            result_df, evidence = agent_execute(
+                plan_graph, 
+                dataset_handle, 
+                materialize=materialize,
+                cache_ttl=cache_ttl,
+                cache_max_gb=cache_max_gb
+            )
 
             typer.echo(f"\nPlan hash: {plan_graph.plan_hash()}")
             typer.echo(f"Steps executed: {len(evidence['steps'])}")
@@ -269,7 +289,13 @@ def ask(
             # Dataset already loaded at the top of the function
 
             # Create cache manager (or None to bypass cache)
-            cache_manager = None if no_cache else CacheManager()
+            if no_cache:
+                cache_manager = None
+            else:
+                from data_agent.cache import CacheManager
+                cache_manager = CacheManager(
+                    ttl_hours=cache_ttl if cache_ttl is not None else config.DATA_AGENT_CACHE_TTL_HOURS
+                )
 
             # Execute the plan
             answer = run(lf, query_plan, cache_manager)
@@ -810,6 +836,15 @@ def run(
         "--export",
         help="Export results to JSON file (use 'auto' for artifacts/outputs/{hash}.json)",
     ),
+    materialize: str = typer.Option(
+        "heavy", "--materialize", help="Materialization strategy: all, heavy, or never"
+    ),
+    cache_ttl: Optional[int] = typer.Option(
+        None, "--cache-ttl", help="Cache TTL in hours (overrides config default)"
+    ),
+    cache_max_gb: Optional[float] = typer.Option(
+        None, "--cache-max-gb", help="Maximum cache size in GB (overrides config default)"
+    ),
     no_cache: bool = typer.Option(
         False, "--no-cache", help="Bypass cache and force fresh execution"
     ),
@@ -817,6 +852,11 @@ def run(
     """Execute a pre-generated plan from JSON file."""
     import json
     from pathlib import Path
+
+    # Validate materialize option
+    if materialize not in ["all", "heavy", "never"]:
+        typer.echo(f"Invalid materialize option: {materialize}. Must be 'all', 'heavy', or 'never'", err=True)
+        raise typer.Exit(1) from None
 
     from data_agent.core.dsl_loader import DSLLoader, DSLValidationError
     from data_agent.ingest.loader import load_dataset
@@ -858,8 +898,14 @@ def run(
             fingerprint="dataset",
         )
 
-        # Execute the plan
-        result_df, evidence = agent_execute(plan_graph, dataset_handle)
+        # Execute the plan with materialize and cache options
+        result_df, evidence = agent_execute(
+            plan_graph, 
+            dataset_handle, 
+            materialize=materialize,
+            cache_ttl=cache_ttl,
+            cache_max_gb=cache_max_gb
+        )
 
         typer.echo(f"Plan executed: {plan_graph.plan_hash()}")
         typer.echo(f"Steps executed: {len(evidence['steps'])}")
@@ -874,6 +920,12 @@ def run(
 
         # Export results if requested
         if export:
+            export_path = export
+            if export == "auto":
+                import time
+                timestamp = int(time.time())
+                export_path = f"artifacts/outputs/{timestamp}_{plan_graph.plan_hash()[:8]}.json"
+            
             output_data = {
                 "plan": plan_graph.model_dump(),
                 "plan_hash": plan_graph.plan_hash(),
@@ -885,9 +937,9 @@ def run(
                 "evidence": evidence,
             }
 
-            with open(export, "w") as f:
+            with open(export_path, "w") as f:
                 json.dump(output_data, f, indent=2, default=str)
-            typer.echo(f"\nResults exported to: {export}")
+            typer.echo(f"\nResults exported to: {export_path}")
 
         logger.info(
             "Run command executed",
