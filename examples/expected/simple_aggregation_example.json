@@ -1,0 +1,72 @@
+[
+  {
+    "pipeline_name": "ANR Pipeline Company",
+    "sum_scheduled_quantity": 15750000.5,
+    "count_records": 365,
+    "avg_daily_quantity": 43150.7,
+    "rank": 1
+  },
+  {
+    "pipeline_name": "Alliance Pipeline LP", 
+    "sum_scheduled_quantity": 12890000.2,
+    "count_records": 365,
+    "avg_daily_quantity": 35315.1,
+    "rank": 2
+  },
+  {
+    "pipeline_name": "Colorado Interstate Gas Company",
+    "sum_scheduled_quantity": 11200000.8,
+    "count_records": 365,
+    "avg_daily_quantity": 30684.9,
+    "rank": 3
+  },
+  {
+    "pipeline_name": "Cameron Interstate Pipeline",
+    "sum_scheduled_quantity": 9850000.1,
+    "count_records": 365,
+    "avg_daily_quantity": 26986.3,
+    "rank": 4
+  },
+  {
+    "pipeline_name": "Algonquin Gas Transmission, LLC",
+    "sum_scheduled_quantity": 8750000.9,
+    "count_records": 365,
+    "avg_daily_quantity": 23972.6,
+    "rank": 5
+  },
+  {
+    "pipeline_name": "Carolina Gas Transmission",
+    "sum_scheduled_quantity": 7650000.3,
+    "count_records": 365,
+    "avg_daily_quantity": 20958.9,
+    "rank": 6
+  },
+  {
+    "pipeline_name": "Cheniere Creole Trail Pipeline, L.P.",
+    "sum_scheduled_quantity": 6800000.7,
+    "count_records": 365,
+    "avg_daily_quantity": 18630.1,
+    "rank": 7
+  },
+  {
+    "pipeline_name": "Cheyenne Plains Gas Pipeline Company, L.L.C.",
+    "sum_scheduled_quantity": 5900000.4,
+    "count_records": 365,
+    "avg_daily_quantity": 16164.4,
+    "rank": 8
+  },
+  {
+    "pipeline_name": "Cimarron River Pipeline",
+    "sum_scheduled_quantity": 4950000.6,
+    "count_records": 365,
+    "avg_daily_quantity": 13561.6,
+    "rank": 9
+  },
+  {
+    "pipeline_name": "Cheyenne Connector",
+    "sum_scheduled_quantity": 4200000.2,
+    "count_records": 365,
+    "avg_daily_quantity": 11506.8,
+    "rank": 10
+  }
+]

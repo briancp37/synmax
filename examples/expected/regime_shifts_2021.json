@@ -1,0 +1,92 @@
+[
+  {
+    "pipeline_name": "ANR Pipeline Company",
+    "changepoint_date": "2021-03-15",
+    "change_magnitude": 1250.5,
+    "confidence": 0.85,
+    "regime_before_mean": 1500.2,
+    "regime_after_mean": 2750.7,
+    "rank": 1
+  },
+  {
+    "pipeline_name": "Alliance Pipeline LP",
+    "changepoint_date": "2021-07-22",
+    "change_magnitude": 980.3,
+    "confidence": 0.78,
+    "regime_before_mean": 2100.1,
+    "regime_after_mean": 1119.8,
+    "rank": 2
+  },
+  {
+    "pipeline_name": "Colorado Interstate Gas Company",
+    "changepoint_date": "2021-11-08",
+    "change_magnitude": 875.9,
+    "confidence": 0.72,
+    "regime_before_mean": 1800.4,
+    "regime_after_mean": 2676.3,
+    "rank": 3
+  },
+  {
+    "pipeline_name": "Cameron Interstate Pipeline",
+    "changepoint_date": "2021-05-12",
+    "change_magnitude": 650.2,
+    "confidence": 0.68,
+    "regime_before_mean": 3200.8,
+    "regime_after_mean": 2550.6,
+    "rank": 4
+  },
+  {
+    "pipeline_name": "Cheyenne Plains Gas Pipeline Company, L.L.C.",
+    "changepoint_date": "2021-09-03",
+    "change_magnitude": 545.7,
+    "confidence": 0.65,
+    "regime_before_mean": 950.3,
+    "regime_after_mean": 1496.0,
+    "rank": 5
+  },
+  {
+    "pipeline_name": "Carolina Gas Transmission",
+    "changepoint_date": "2021-01-28",
+    "change_magnitude": 423.1,
+    "confidence": 0.62,
+    "regime_before_mean": 1200.5,
+    "regime_after_mean": 777.4,
+    "rank": 6
+  },
+  {
+    "pipeline_name": "Algonquin Gas Transmission, LLC",
+    "changepoint_date": "2021-12-15",
+    "change_magnitude": 389.8,
+    "confidence": 0.58,
+    "regime_before_mean": 1650.2,
+    "regime_after_mean": 2040.0,
+    "rank": 7
+  },
+  {
+    "pipeline_name": "Cimarron River Pipeline",
+    "changepoint_date": "2021-04-20",
+    "change_magnitude": 325.4,
+    "confidence": 0.55,
+    "regime_before_mean": 780.1,
+    "regime_after_mean": 454.7,
+    "rank": 8
+  },
+  {
+    "pipeline_name": "Cheniere Creole Trail Pipeline, L.P.",
+    "changepoint_date": "2021-08-11",
+    "change_magnitude": 298.6,
+    "confidence": 0.52,
+    "regime_before_mean": 2800.3,
+    "regime_after_mean": 3098.9,
+    "rank": 9
+  },
+  {
+    "pipeline_name": "Cheyenne Connector",
+    "changepoint_date": "2021-06-07",
+    "change_magnitude": 256.3,
+    "confidence": 0.49,
+    "regime_before_mean": 890.7,
+    "regime_after_mean": 634.4,
+    "rank": 10
+  }
+]
